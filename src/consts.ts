@@ -39,7 +39,6 @@ export function categoryColor(cat: string): string {
 // 页脚社交链接
 export const SOCIAL = [
   { label: 'GitHub', href: 'https://github.com/' },
-  { label: 'Email', href: 'mailto:fish@example.com' },
 ];
 
 // Giscus 评论配置。

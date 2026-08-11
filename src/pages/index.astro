@@ -14,18 +14,21 @@ const pageSize = SITE.pageSize;
 const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
 const pagePosts = posts.slice(0, pageSize);
 const currentPage = 1;
+
+const QQ_NUMBER = '1707127199';
 ---
 
 <BaseLayout title={SITE.title} description={SITE.description}>
   <section class="hero">
     <div class="hero-inner container">
       <div class="hero-avatar">
-        <img src={withBase('favicon.svg')} alt="" />
+        <img src={withBase('avatar.jpg')} alt="" />
       </div>
       <h1>鱼板的自留地</h1>
       <p class="hero-tag">{SITE.tagline}</p>
       <div class="hero-actions">
         <a class="btn primary" href={withBase('photos/')}>📷 看看摄影</a>
+        <button class="btn outline qq-btn" data-qq={QQ_NUMBER} title="点击复制 QQ 号">📮 QQ: {QQ_NUMBER}</button>
         <a class="btn outline" href={withBase('about/')}>关于我 →</a>
       </div>
       <div class="hero-stats">
@@ -44,3 +47,40 @@ const currentPage = 1;
 
   <Pagination currentPage={currentPage} totalPages={totalPages} />
 </BaseLayout>
+
+<script>
+  // ── QQ 号一键复制 ──
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.qq-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const qq = btn.dataset.qq ?? '';
+    navigator.clipboard.writeText(qq).then(() => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ 已复制！';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.classList.remove('copied');
+      }, 1800);
+    }).catch(() => {
+      // fallback：用 textarea 复制
+      const ta = document.createElement('textarea');
+      ta.value = qq;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ 已复制！';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1800);
+    });
+  });
+
+  // 悬浮提示（CSS tooltip 由 :hover::after 实现，这里加个 data 属性辅助）
+  document.querySelectorAll('.qq-btn').forEach((btn) => {
+    btn.setAttribute('title', '点击复制 QQ 号');
+  });
+</script>

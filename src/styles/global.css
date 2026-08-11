@@ -121,7 +121,7 @@ img { max-width: 100%; height: auto; }
   gap: 9px;
 }
 .brand:hover { text-decoration: none; }
-.brand .logo { width: 26px; height: 26px; border-radius: 7px; }
+.brand .logo { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
 
 /* 主题切换按钮 */
 .theme-toggle {
@@ -204,15 +204,16 @@ img { max-width: 100%; height: auto; }
   padding: 40px 24px 32px;
 }
 .hero-avatar {
-  width: 72px; height: 72px;
+  width: 80px; height: 80px;
   margin: 0 auto 16px;
-  border-radius: 22px;
-  background: rgba(255,255,255,0.92);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
   display: grid; place-items: center;
-  transform: rotate(-4deg);
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,0.4);
 }
-.hero-avatar img { width: 48px; height: 48px; }
+.hero-avatar img { width: 80px; height: 80px; object-fit: cover; }
 .hero h1 {
   font-size: 2rem;
   margin: 0 0 8px;
@@ -542,6 +543,37 @@ a.badge:hover { background: var(--accent-soft); color: var(--accent-strong); tex
   background: rgba(255,255,255,0.28);
   border-color: rgba(255,255,255,0.8);
   box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+}
+
+/* QQ 复制按钮 */
+.qq-btn {
+  cursor: pointer;
+  position: relative;
+  font-variant-numeric: tabular-nums;
+}
+.qq-btn:hover::after {
+  content: '点击复制';
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.78rem;
+  color: rgba(255,255,255,0.85);
+  background: rgba(0,0,0,0.55);
+  padding: 3px 10px;
+  border-radius: 6px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: qqTipFadeIn 0.2s ease;
+}
+.qq-btn.copied {
+  background: rgba(16,185,129,0.35) !important;
+  border-color: #10b981 !important;
+  color: #d1fae5 !important;
+}
+@keyframes qqTipFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 
 /* 幽灵按钮（通用次操作） */
