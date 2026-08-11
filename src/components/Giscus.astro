@@ -1,0 +1,40 @@
+---
+import { GISCUS } from '../consts';
+
+const configured = Boolean(GISCUS.repo && GISCUS.repoId && GISCUS.categoryId);
+---
+
+{configured ? (
+  <div class="giscus"></div>
+  <script is:inline define:vars={{ GISCUS }}>
+    function loadGiscus() {
+      const container = document.querySelector('.giscus');
+      if (!container) return;
+      container.innerHTML = '';
+      const s = document.createElement('script');
+      s.src = 'https://giscus.app/client.js';
+      s.setAttribute('data-repo', GISCUS.repo);
+      s.setAttribute('data-repo-id', GISCUS.repoId);
+      s.setAttribute('data-category', GISCUS.category);
+      s.setAttribute('data-category-id', GISCUS.categoryId);
+      s.setAttribute('data-mapping', GISCUS.mapping);
+      s.setAttribute('data-reactions-enabled', GISCUS.reactionsEnabled ? '1' : '0');
+      s.setAttribute('data-emit-metadata', '0');
+      s.setAttribute('data-input-position', 'bottom');
+      s.setAttribute('data-theme', GISCUS.theme);
+      s.setAttribute('data-lang', GISCUS.lang);
+      s.setAttribute('data-loading', 'lazy');
+      s.crossOrigin = 'anonymous';
+      s.async = true;
+      container.appendChild(s);
+    }
+    // 初始加载 + 页面切换（View Transitions）后重新挂载，避免评论消失
+    loadGiscus();
+    document.addEventListener('astro:page-load', loadGiscus);
+  </script>
+) : (
+  <div class="comment-placeholder">
+    评论功能待配置：在 <code>src/consts.ts</code> 的 <code>GISCUS</code> 中填入 GitHub 仓库与
+    Discussions 分类信息即可启用（步骤见项目说明 / <a href="https://giscus.app" target="_blank" rel="noopener">giscus.app</a>）。
+  </div>
+)}

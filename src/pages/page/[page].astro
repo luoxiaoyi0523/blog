@@ -1,0 +1,36 @@
+---
+import { getCollection } from 'astro:content';
+import PostCard from '../../components/PostCard.astro';
+import Pagination from '../../components/Pagination.astro';
+import { SITE } from '../../consts';
+
+export async function getStaticPaths() {
+  const posts = (await getCollection('blog', ({ data }) =>
+    import.meta.env.PROD ? !data.draft : true
+  )).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+  const pageSize = SITE.pageSize;
+  const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+
+  const paths = [];
+  for (let n = 2; n <= totalPages; n++) {
+    paths.push({
+      params: { page: String(n) },
+      props: {
+        pagePosts: posts.slice((n - 1) * pageSize, n * pageSize),
+        currentPage: n,
+        totalPages,
+      },
+    });
+  }
+  return paths;
+}
+
+const { pagePosts, currentPage, totalPages } = Astro.props;
+---
+
+<div class="post-list">
+  {pagePosts.map((post) => <PostCard post={post} />)}
+</div>
+
+<Pagination currentPage={currentPage} totalPages={totalPages} />

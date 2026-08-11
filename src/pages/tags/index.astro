@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const posts = await getCollection('blog', ({ data }) =>
+  import.meta.env.PROD ? !data.draft : true
+);
+
+const counts = new Map<string, number>();
+for (const p of posts) {
+  for (const t of p.data.tags) {
+    counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+}
+const tags = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<BaseLayout title="标签" description="文章标签导航">
+  <div class="section-head">
+    <h1>标签</h1>
+    <span class="sub">共 {tags.length} 个</span>
+  </div>
+  <div class="badge-cloud">
+    {tags.map(([tag, count]) => (
+      <a class="badge" href={`/tags/${encodeURIComponent(tag)}`}>
+        #{tag} <span class="count">{count}</span>
+      </a>
+    ))}
+  </div>
+</BaseLayout>

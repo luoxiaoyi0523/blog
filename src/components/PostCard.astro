@@ -1,0 +1,36 @@
+---
+import FormattedDate from './FormattedDate.astro';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  post: CollectionEntry<'blog'>;
+}
+const { post } = Astro.props;
+const { data, id } = post;
+---
+
+<article class="post-card">
+  <h2><a href={`/blog/${id}`}>{data.title}</a></h2>
+  <p class="summary">{data.description}</p>
+  <div class="meta">
+    <FormattedDate date={data.pubDate} />
+    <span class="dot">·</span>
+    <a class="badge cat" href={`/categories/${encodeURIComponent(data.category)}`}>{data.category}</a>
+    {data.tags.slice(0, 3).map((t) => (
+      <a class="badge" href={`/tags/${encodeURIComponent(t)}`}>#{t}</a>
+    ))}
+  </div>
+</article>
+
+<style>
+  .post-card h2 a {
+    color: var(--text);
+    text-decoration: none;
+  }
+  .post-card h2 a:hover {
+    color: var(--accent-strong);
+  }
+  .post-card .meta .dot {
+    opacity: 0.5;
+  }
+</style>

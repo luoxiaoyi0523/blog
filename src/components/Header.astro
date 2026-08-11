@@ -1,0 +1,52 @@
+---
+import { NAV_LINKS, SITE } from '../consts';
+
+const path = Astro.url.pathname;
+function isActive(href: string): boolean {
+  if (href === '/') return path === '/' || path === '';
+  return path.startsWith(href);
+}
+---
+
+<header class="site-header">
+  <div class="container">
+    <a href="/" class="brand">
+      <img src="/favicon.svg" alt="" class="logo" />
+      <span>{SITE.title}</span>
+    </a>
+
+    <button class="menu-toggle" id="menuToggle" aria-label="打开菜单" aria-expanded="false">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6" />
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    </button>
+
+    <nav class="nav" id="nav">
+      {NAV_LINKS.map((item) => (
+        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>
+
+<script>
+  // 用事件委托，兼容 View Transitions：document 不会随页面切换被替换
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('#menuToggle');
+    if (!btn) return;
+    const nav = document.getElementById('nav');
+    if (!nav) return;
+    const open = nav.classList.toggle('open');
+    btn.setAttribute('aria-expanded', String(open));
+  });
+
+  // 每次页面切换后收起移动端菜单，避免状态残留
+  document.addEventListener('astro:page-load', () => {
+    const nav = document.getElementById('nav');
+    const btn = document.getElementById('menuToggle');
+    nav?.classList.remove('open');
+    btn?.setAttribute('aria-expanded', 'false');
+  });
+</script>

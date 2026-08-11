@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+import PostCard from '../components/PostCard.astro';
+import Pagination from '../components/Pagination.astro';
+import { SITE } from '../consts';
+
+const posts = (await getCollection('blog', ({ data }) =>
+  import.meta.env.PROD ? !data.draft : true
+)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const pageSize = SITE.pageSize;
+const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
+const pagePosts = posts.slice(0, pageSize);
+const currentPage = 1;
+---
+
+<section class="hero">
+  <h1>{SITE.title}</h1>
+  <p>{SITE.tagline}</p>
+</section>
+
+<div class="post-list">
+  {pagePosts.map((post) => <PostCard post={post} />)}
+</div>
+
+<Pagination currentPage={currentPage} totalPages={totalPages} />

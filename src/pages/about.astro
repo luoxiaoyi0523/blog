@@ -1,0 +1,26 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { SITE, SOCIAL } from '../consts';
+---
+
+<BaseLayout title="关于" description={`关于 ${SITE.author}`}>
+  <div class="section-head">
+    <h1>关于我</h1>
+  </div>
+  <div class="prose-card prose">
+    <p>你好，我是 <strong>{SITE.author}</strong> 🐟。</p>
+    <p>{SITE.description}</p>
+    <p>
+      这个站点用 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>
+      搭建，文章以 Markdown 写作，部署在 GitHub Pages。右侧（桌面端）或正文下方会显示目录与评论。
+    </p>
+    <p>平时喜欢折腾前端、效率工具，也爱把生活里的小事记下来。</p>
+    <h3>联系方式</h3>
+    <ul>
+      <li>邮箱：<a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+      {SOCIAL.map((s) => (
+        <li><a href={s.href} target="_blank" rel="noopener noreferrer">{s.label}</a></li>
+      ))}
+    </ul>
+  </div>
+</BaseLayout>
