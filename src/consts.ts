@@ -2,10 +2,10 @@
 // 发布文章不需要动这个文件，只有改站点信息/导航/Giscus 时才改。
 
 export const SITE = {
-  title: '小鱼的自留地',
+  title: '鱼板的自留地',
   tagline: '记录技术、生活与胡思乱想',
   description: '一个用 Astro 搭建的个人博客，分享前端、效率工具与日常随笔。',
-  author: '小鱼',
+  author: '鱼板',
   email: 'fish@example.com',
   lang: 'zh-CN',
   // 每页文章数（首页分页用）
