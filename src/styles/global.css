@@ -272,7 +272,6 @@ img { max-width: 100%; height: auto; }
   width: max-content;
   will-change: transform;
 }
-.marquee-viewport:hover .marquee-track.running { animation-play-state: paused; }
 
 /* 卡片基础态：无静态倾斜，由 JS 驱动鼠标跟随 */
 .marquee-card {
@@ -307,11 +306,6 @@ img { max-width: 100%; height: auto; }
 }
 .marquee-card:hover img {
   transform: scale(1.14);
-}
-
-@keyframes marquee-scroll {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
 }
 
 @media (max-width: 640px) {
