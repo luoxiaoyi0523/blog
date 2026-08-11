@@ -7,8 +7,8 @@ import sitemap from '@astrojs/sitemap';
 //      base: '/<repo>/',
 //   个人页（<user>.github.io）则保留 base 为注释即可。
 export default defineConfig({
-  site: 'https://example.github.io/',
-  // base: '/your-repo/',
+  site: 'https://luoxiaoyi0523.github.io/blog/',
+  base: '/blog/',
   integrations: [sitemap()],
   markdown: {
     shikiConfig: {
