@@ -15,11 +15,26 @@ export const SITE = {
 // 顶部导航。想加栏目就往这里加一项。
 export const NAV_LINKS = [
   { href: '/', label: '首页' },
+  { href: '/photos/', label: '摄影' },
   { href: '/categories/', label: '分类' },
   { href: '/tags/', label: '标签' },
   { href: '/about/', label: '关于' },
   { href: '/rss.xml', label: 'RSS' },
 ];
+
+// 分类配色：给文章卡片顶部色条 / 分类徽章一个主题色，视觉更丰富。
+// 没列出的分类会回退到 accent 蓝。
+export const CATEGORY_COLORS: Record<string, string> = {
+  '技术': '#0ea5e9',
+  '生活': '#f59e0b',
+  '摄影': '#ec4899',
+  '随笔': '#8b5cf6',
+  '教程': '#10b981',
+};
+
+export function categoryColor(cat: string): string {
+  return CATEGORY_COLORS[cat] ?? '#0ea5e9';
+}
 
 // 页脚社交链接
 export const SOCIAL = [

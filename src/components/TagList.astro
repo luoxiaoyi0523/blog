@@ -1,4 +1,6 @@
 ---
+import { withBase } from '../utils/path';
+
 interface Props {
   category?: string;
   tags?: string[];
@@ -7,8 +9,8 @@ const { category, tags = [] } = Astro.props;
 ---
 
 {category && (
-  <a class="badge cat" href={`/categories/${encodeURIComponent(category)}`}>{category}</a>
+  <a class="badge cat" href={withBase(`categories/${encodeURIComponent(category)}`)}>{category}</a>
 )}
 {tags.map((t) => (
-  <a class="badge" href={`/tags/${encodeURIComponent(t)}`}>#{t}</a>
+  <a class="badge" href={withBase(`tags/${encodeURIComponent(t)}`)}>#{t}</a>
 ))}

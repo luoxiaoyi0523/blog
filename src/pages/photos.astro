@@ -1,0 +1,186 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { withBase } from '../utils/path';
+
+// 自动读取 src/assets/photos/ 下的所有图片（jpg/png/webp/gif/avif）。
+// 你只需把照片文件丢进那个文件夹，构建时会自动出现在这里，无需改任何代码。
+const modules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif}', {
+  eager: true,
+});
+
+const photos = Object.entries(modules)
+  .map(([path, mod]) => {
+    const meta = (mod as any).default;
+    const base = path.split('/').pop() ?? '';
+    const caption = base.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
+    return { src: meta.src as string, caption };
+  })
+  .sort((a, b) => a.caption.localeCompare(b.caption));
+---
+
+<BaseLayout title="摄影" description="我的摄影作品集，分享旅行与生活里的光影。">
+  <div class="section-head">
+    <h1>摄影 📷</h1>
+    <span class="sub">{photos.length} 张</span>
+  </div>
+
+  {
+    photos.length === 0 ? (
+      <div class="empty">
+        <div class="empty-emoji">🖼️</div>
+        <h3>还没有照片</h3>
+        <p>把你的照片（<code>.jpg</code> / <code>.png</code> / <code>.webp</code>）复制到项目的 <code>src/assets/photos/</code> 文件夹，<br />提交并推送后，它们就会自动出现在这里。</p>
+        <p class="hint">文件名会作为图片说明显示（例如 <code>海边日落.jpg</code> → “海边日落”）。</p>
+      </div>
+    ) : (
+      <div class="gallery">
+        {photos.map((p, i) => (
+          <figure class="photo" data-i={i} data-full={p.src} data-cap={p.caption}>
+            <img src={p.src} alt={p.caption} loading="lazy" />
+            <figcaption>{p.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+    )
+  }
+
+  <!-- 灯箱 -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lb-close" aria-label="关闭">×</button>
+    <button class="lb-prev" aria-label="上一张">←</button>
+    <img id="lbImg" src="" alt="" />
+    <div class="lb-cap" id="lbCap"></div>
+    <button class="lb-next" aria-label="下一张">→</button>
+  </div>
+</BaseLayout>
+
+<script>
+  const figs = () => Array.from(document.querySelectorAll<HTMLElement>('.photo'));
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg') as HTMLImageElement;
+  const lbCap = document.getElementById('lbCap');
+  let cur = 0;
+
+  function show(i: number) {
+    const list = figs();
+    if (!list.length) return;
+    cur = (i + list.length) % list.length;
+    const f = list[cur];
+    if (lbImg && lbCap && f) {
+      lbImg.src = f.dataset.full || '';
+      lbCap.textContent = f.dataset.cap || '';
+    }
+  }
+  function open() {
+    lb?.classList.add('open');
+    lb?.setAttribute('aria-hidden', 'false');
+  }
+  function close() {
+    lb?.classList.remove('open');
+    lb?.setAttribute('aria-hidden', 'true');
+  }
+
+  // 用事件委托，兼容 Astro View Transitions（document 不会被替换）
+  document.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const fig = t.closest<HTMLElement>('.photo');
+    if (fig) {
+      show(Number(fig.dataset.i) || 0);
+      open();
+      return;
+    }
+    if (t.closest('.lb-close') || t === lb) close();
+    if (t.closest('.lb-prev')) show(cur - 1);
+    if (t.closest('.lb-next')) show(cur + 1);
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!lb?.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    if (e.key === 'ArrowLeft') show(cur - 1);
+    if (e.key === 'ArrowRight') show(cur + 1);
+  });
+</script>
+
+<style>
+  .gallery {
+    columns: 3 260px;
+    column-gap: 16px;
+    margin-bottom: 40px;
+  }
+  .photo {
+    break-inside: avoid;
+    margin: 0 0 16px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    cursor: zoom-in;
+    background: var(--bg-elevated);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  .photo:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+  }
+  .photo img { display: block; width: 100%; height: auto; }
+  .photo figcaption {
+    padding: 9px 12px;
+    font-size: 0.86rem;
+    color: var(--text-muted);
+  }
+
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-subtle);
+    color: var(--text-muted);
+    margin-bottom: 40px;
+  }
+  .empty-emoji { font-size: 3rem; }
+  .empty h3 { margin: 10px 0 8px; color: var(--text); }
+  .empty .hint { font-size: 0.85rem; opacity: 0.8; margin-top: 14px; }
+  .empty code {
+    font-family: var(--mono);
+    background: var(--bg-elevated);
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(10, 12, 16, 0.92);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    z-index: 200;
+    padding: 20px;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 92vw;
+    max-height: 80vh;
+    border-radius: 10px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+  .lb-cap { color: #fff; margin-top: 14px; font-size: 0.95rem; }
+  .lb-close, .lb-prev, .lb-next {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    width: 46px; height: 46px;
+    font-size: 22px;
+    display: grid; place-items: center;
+    transition: background 0.15s;
+  }
+  .lb-close:hover, .lb-prev:hover, .lb-next:hover { background: rgba(255, 255, 255, 0.28); }
+  .lb-close { top: 20px; right: 20px; }
+  .lb-prev { left: 20px; top: 50%; transform: translateY(-50%); }
+  .lb-next { right: 20px; top: 50%; transform: translateY(-50%); }
+</style>

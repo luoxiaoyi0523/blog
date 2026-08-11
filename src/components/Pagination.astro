@@ -1,4 +1,6 @@
 ---
+import { withBase } from '../utils/path';
+
 interface Props {
   currentPage: number;
   totalPages: number;
@@ -6,8 +8,8 @@ interface Props {
 const { currentPage, totalPages } = Astro.props;
 const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
 const prevHref =
-  currentPage > 1 ? (currentPage === 2 ? '/' : `/page/${currentPage - 1}`) : null;
-const nextHref = currentPage < totalPages ? `/page/${currentPage + 1}` : null;
+  currentPage > 1 ? (currentPage === 2 ? withBase('/') : withBase(`page/${currentPage - 1}`)) : null;
+const nextHref = currentPage < totalPages ? withBase(`page/${currentPage + 1}`) : null;
 ---
 
 {totalPages > 1 && (
@@ -17,7 +19,7 @@ const nextHref = currentPage < totalPages ? `/page/${currentPage + 1}` : null;
       : <span class="disabled">← 上一页</span>}
     {pages.map((n) => (
       <a
-        href={n === 1 ? '/' : `/page/${n}`}
+        href={n === 1 ? withBase('/') : withBase(`page/${n}`)}
         class={n === currentPage ? 'current' : ''}
         aria-current={n === currentPage ? 'page' : undefined}
       >{n}</a>

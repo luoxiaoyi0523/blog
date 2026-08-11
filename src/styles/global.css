@@ -144,12 +144,55 @@ img { max-width: 100%; height: auto; }
 
 /* ---------------- Hero (首页顶部) ---------------- */
 .hero {
-  padding: 48px 0 28px;
+  position: relative;
+  overflow: hidden;
+  margin: -20px 0 30px;
+  border-radius: 0 0 28px 28px;
+  background: linear-gradient(135deg, var(--accent-soft), color-mix(in srgb, #c7d2fe 55%, var(--bg-elevated)));
   border-bottom: 1px solid var(--border);
-  margin-bottom: 28px;
 }
-.hero h1 { font-size: 2rem; margin: 0 0 8px; letter-spacing: -0.02em; }
-.hero p { color: var(--text-muted); margin: 0; font-size: 1.05rem; }
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  opacity: 0.9;
+}
+.hero-bg svg { width: 100%; height: 100%; }
+.hero-inner {
+  position: relative;
+  text-align: center;
+  padding: 56px 20px 50px;
+}
+.hero-avatar {
+  width: 84px; height: 84px;
+  margin: 0 auto 18px;
+  border-radius: 26px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-hover);
+  display: grid; place-items: center;
+  transform: rotate(-4deg);
+}
+.hero-avatar img { width: 56px; height: 56px; }
+.hero h1 {
+  font-size: 2.6rem;
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, var(--accent-strong), #7c3aed 60%, #db2777);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero-tag { color: var(--text); font-weight: 600; font-size: 1.15rem; margin: 0 0 6px; }
+.hero-desc { color: var(--text-muted); margin: 0 auto 22px; max-width: 540px; font-size: 1rem; }
+.hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.hero-stats {
+  margin-top: 22px;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+  display: flex; gap: 10px; justify-content: center; align-items: center; flex-wrap: wrap;
+}
+.hero-stats a { color: var(--accent-strong); font-weight: 600; }
+.hero-stats .sep { opacity: 0.4; }
+.hero-stats strong { color: var(--text); }
 
 /* ---------------- Post list / Cards ---------------- */
 .post-list {
@@ -249,11 +292,20 @@ a.badge:hover { background: var(--accent-soft); color: var(--accent-strong); tex
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  margin: 8px 0 20px;
+  margin: 8px 0 22px;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 10px;
+  padding-bottom: 12px;
+  position: relative;
 }
-.section-head h1 { font-size: 1.5rem; margin: 0; }
+.section-head::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -1px;
+  width: 64px; height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent), #7c3aed);
+}
+.section-head h1 { font-size: 1.6rem; margin: 0; }
 .section-head .sub { color: var(--text-faint); font-size: 0.9rem; }
 
 /* ---------------- Post detail ---------------- */
@@ -366,7 +418,8 @@ a.badge:hover { background: var(--accent-soft); color: var(--accent-strong); tex
 
 /* ---------------- Footer ---------------- */
 .site-footer {
-  border-top: 1px solid var(--border);
+  border-top: 3px solid transparent;
+  border-image: linear-gradient(90deg, var(--accent), #7c3aed, #db2777) 1;
   margin-top: 40px;
   padding: 28px 0;
   color: var(--text-faint);

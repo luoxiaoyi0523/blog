@@ -1,36 +1,65 @@
 ---
 import FormattedDate from './FormattedDate.astro';
 import type { CollectionEntry } from 'astro:content';
+import { withBase } from '../utils/path';
+import { categoryColor } from '../consts';
 
 interface Props {
   post: CollectionEntry<'blog'>;
 }
 const { post } = Astro.props;
 const { data, id } = post;
+const catColor = categoryColor(data.category);
 ---
 
-<article class="post-card">
-  <h2><a href={`/blog/${id}`}>{data.title}</a></h2>
+<article class="post-card" style={`--cat:${catColor}`}>
+  <div class="card-top">
+    <span class="cat-chip" style={`--c:${catColor}`}>{data.category}</span>
+  </div>
+  <h2><a href={withBase(`blog/${id}`)}>{data.title}</a></h2>
   <p class="summary">{data.description}</p>
   <div class="meta">
     <FormattedDate date={data.pubDate} />
     <span class="dot">·</span>
-    <a class="badge cat" href={`/categories/${encodeURIComponent(data.category)}`}>{data.category}</a>
+    <a class="badge cat" href={withBase(`categories/${encodeURIComponent(data.category)}`)}>{data.category}</a>
     {data.tags.slice(0, 3).map((t) => (
-      <a class="badge" href={`/tags/${encodeURIComponent(t)}`}>#{t}</a>
+      <a class="badge" href={withBase(`tags/${encodeURIComponent(t)}`)}>#{t}</a>
     ))}
   </div>
 </article>
 
 <style>
-  .post-card h2 a {
-    color: var(--text);
-    text-decoration: none;
+  .post-card {
+    position: relative;
+    overflow: hidden;
+    border-top: 3px solid var(--cat);
   }
-  .post-card h2 a:hover {
-    color: var(--accent-strong);
+  .post-card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 90px;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--cat) 12%, transparent), transparent);
+    pointer-events: none;
   }
-  .post-card .meta .dot {
-    opacity: 0.5;
+  .card-top {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 10px;
+  }
+  .cat-chip {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--c);
+    background: color-mix(in srgb, var(--c) 14%, transparent);
+    padding: 3px 10px;
+    border-radius: 999px;
+  }
+  .post-card h2 {
+    position: relative;
+  }
+  .post-card:hover {
+    border-color: var(--cat);
   }
 </style>

@@ -1,20 +1,31 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, SOCIAL } from '../consts';
+import { withBase } from '../utils/path';
 ---
 
 <BaseLayout title="关于" description={`关于 ${SITE.author}`}>
-  <div class="section-head">
-    <h1>关于我</h1>
+  <div class="about-hero">
+    <div class="about-banner" aria-hidden="true"></div>
+    <div class="about-avatar">
+      <img src={withBase('favicon.svg')} alt="" />
+    </div>
+    <h1>{SITE.author} 🐟</h1>
+    <p class="about-tag">{SITE.tagline}</p>
+    <div class="about-social">
+      {SOCIAL.map((s) => (
+        <a class="btn ghost" href={s.href} target="_blank" rel="noopener noreferrer">{s.label}</a>
+      ))}
+    </div>
   </div>
+
   <div class="prose-card prose">
-    <p>你好，我是 <strong>{SITE.author}</strong> 🐟。</p>
-    <p>{SITE.description}</p>
+    <p>你好，我是 <strong>{SITE.author}</strong>。这是我的自留地，用来记录技术、生活和那些不吐不快的胡思乱想。</p>
     <p>
       这个站点用 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>
-      搭建，文章以 Markdown 写作，部署在 GitHub Pages。右侧（桌面端）或正文下方会显示目录与评论。
+      搭建，文章以 Markdown 写作，部署在 GitHub Pages。左侧（桌面端）或正文下方会显示目录与评论。
     </p>
-    <p>平时喜欢折腾前端、效率工具，也爱把生活里的小事记下来。</p>
+    <p>平时喜欢折腾前端、效率工具，也爱拍照和把生活里的小事记下来——所以这里除了写，还有一个 <a href={withBase('photos/')}>摄影角落</a> 放我的照片。</p>
     <h3>联系方式</h3>
     <ul>
       <li>邮箱：<a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
@@ -24,3 +35,36 @@ import { SITE, SOCIAL } from '../consts';
     </ul>
   </div>
 </BaseLayout>
+
+<style>
+  .about-hero {
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    text-align: center;
+    padding: 0 24px 28px;
+    margin: 18px 0 26px;
+    overflow: hidden;
+  }
+  .about-banner {
+    height: 120px;
+    margin: 0 -24px 0;
+    background: linear-gradient(120deg, var(--accent), #7c3aed 55%, #db2777);
+  }
+  .about-avatar {
+    width: 96px; height: 96px;
+    margin: -48px auto 14px;
+    border-radius: 28px;
+    background: var(--bg-elevated);
+    border: 4px solid var(--bg-elevated);
+    box-shadow: var(--shadow-hover);
+    display: grid; place-items: center;
+    transform: rotate(-3deg);
+  }
+  .about-avatar img { width: 64px; height: 64px; }
+  .about-hero h1 { margin: 0 0 4px; font-size: 1.7rem; }
+  .about-tag { color: var(--text-muted); margin: 0 0 16px; }
+  .about-social { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+</style>

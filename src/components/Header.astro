@@ -1,17 +1,20 @@
 ---
 import { NAV_LINKS, SITE } from '../consts';
+import { withBase } from '../utils/path';
 
 const path = Astro.url.pathname;
+const homeHref = withBase('/');
 function isActive(href: string): boolean {
-  if (href === '/') return path === '/' || path === '';
-  return path.startsWith(href);
+  const full = withBase(href);
+  if (full === homeHref) return path === homeHref || path === homeHref.replace(/\/$/, '');
+  return path.startsWith(full);
 }
 ---
 
 <header class="site-header">
   <div class="container">
-    <a href="/" class="brand">
-      <img src="/favicon.svg" alt="" class="logo" />
+    <a href={homeHref} class="brand">
+      <img src={withBase('favicon.svg')} alt="" class="logo" />
       <span>{SITE.title}</span>
     </a>
 
@@ -25,7 +28,7 @@ function isActive(href: string): boolean {
 
     <nav class="nav" id="nav">
       {NAV_LINKS.map((item) => (
-        <a href={item.href} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
+        <a href={withBase(item.href)} aria-current={isActive(item.href) ? 'page' : undefined}>{item.label}</a>
       ))}
     </nav>
   </div>
