@@ -10,3 +10,5 @@ npm-debug.log*
 .env
 .env.production
 .DS_Store
+# workbuddy internal (not part of the site)
+.workbuddy/
