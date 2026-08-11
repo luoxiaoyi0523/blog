@@ -263,34 +263,32 @@ img { max-width: 100%; height: auto; }
 .marquee-viewport {
   position: relative;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
 .marquee-track {
   display: flex;
-  gap: 14px;
+  gap: 16px;
   width: max-content;
-  animation: marquee-scroll 30s linear infinite;
   will-change: transform;
 }
-.marquee-viewport:hover .marquee-track { animation-play-state: paused; }
+.marquee-viewport:hover .marquee-track.running { animation-play-state: paused; }
+
+/* 卡片基础态：无静态倾斜，由 JS 驱动鼠标跟随 */
 .marquee-card {
   flex: 0 0 auto;
   width: 220px;
-  height: 150px;
+  height: 140px;
   border-radius: 16px;
   overflow: hidden;
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
-  background: var(--bg-elevated);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
-  transform: perspective(900px) rotateY(-6deg);
-}
-.marquee-card:hover {
-  transform: perspective(900px) rotateY(0deg) scale(1.06);
-  box-shadow: var(--shadow-hover);
-  filter: brightness(1.05);
-  z-index: 2;
+  background: transparent;
+  transition: box-shadow 0.3s ease;
+  transform-style: preserve-3d;
+  /* 默认微倾斜 */
+  transform: perspective(800px) rotateY(-4deg) rotateX(2deg);
+  will-change: transform;
 }
 .marquee-card img {
   width: 100%;
@@ -298,7 +296,19 @@ img { max-width: 100%; height: auto; }
   object-fit: cover;
   display: block;
   pointer-events: none;
+  border-radius: 16px;
+  /* 图片稍大一点，避免 hover 放大时边缘露底色 */
+  transform: scale(1.08);
+  transition: transform 0.35s cubic-bezier(.2,.9,.3,1);
 }
+.marquee-card:hover {
+  box-shadow: var(--shadow-hover);
+  z-index: 2;
+}
+.marquee-card:hover img {
+  transform: scale(1.14);
+}
+
 @keyframes marquee-scroll {
   from { transform: translateX(0); }
   to   { transform: translateX(-50%); }

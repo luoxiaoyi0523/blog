@@ -112,7 +112,7 @@ const allPhotos: string[] = Object.values(photoModules).map(
     btn.setAttribute('title', '点击复制 QQ 号');
   });
 
-  // ── 横向随机摄影卡片流（每次刷新随机抽几张） ──
+  // ── 横向随机摄影卡片流（鼠标跟随 3D 倾斜 + 无缝循环） ──
   function buildMarquee() {
     const wrap = document.querySelector<HTMLElement>('.photo-marquee');
     const track = document.getElementById('marqueeTrack');
@@ -127,8 +127,8 @@ const allPhotos: string[] = Object.values(photoModules).map(
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    // 随机抽 6~9 张（不超过总数）
-    const count = Math.min(all.length, 6 + Math.floor(Math.random() * 4));
+    // 随机抽 6~9 张（不超过总数），最少保证 4 张
+    const count = Math.max(4, Math.min(all.length, 6 + Math.floor(Math.random() * 4)));
     const picked = shuffled.slice(0, count);
 
     // 复制一份用于无缝循环
@@ -141,11 +141,45 @@ const allPhotos: string[] = Object.values(photoModules).map(
       .join('');
     track.dataset.built = '1';
 
-    // 根据内容宽度微调动画时长，保证速度一致
-    const speed = 70; // px/秒
+    // 启动滚动动画
     requestAnimationFrame(() => {
       const w = track.scrollWidth / 2;
-      track.style.animationDuration = `${Math.max(12, w / speed)}s`;
+      if (w <= 0) return;
+      const speed = 65; // px/秒
+      const duration = Math.max(16, w / speed);
+      track.style.animation = `marquee-scroll ${duration}s linear infinite`;
+      track.classList.add('running');
+    });
+
+    // ── 鼠标跟随 3D 倾斜效果 ──
+    // 每张卡片独立跟踪鼠标位置，鼠标靠近哪边哪边就"低"下去
+    track.querySelectorAll<HTMLElement>('.marquee-card').forEach((card) => {
+      card.addEventListener('mousemove', (e: MouseEvent) => {
+        const rect = card.getBoundingClientRect();
+        const x = e.clientX - rect.left;   // 鼠标在卡片内的横坐标
+        const y = e.clientY - rect.top;    // 鼠标在卡片内的纵坐标
+        const cx = rect.width / 2;         // 卡片中心 X
+        const cy = rect.height / 2;        // 卡片中心 Y
+
+        // 归一化到 -1 ~ 1
+        const nx = (x - cx) / cx;   // 左负右正
+        const ny = (y - cy) / cy;   // 上负下正
+
+        // 倾斜角度：鼠标在哪边，那边就向下/向外偏
+        // rotateY: 鼠标在右边 → 卡片右边缘远离（正角度）；左边则反
+        // rotateX: 鼠标在下边 → 卡片下边缘远离（负角度）
+        const rotY = nx * 14;  // 最大 ±14°
+        const rotX = -ny * 10; // 最大 ±10°
+
+        card.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
+        card.style.transition = 'transform 0.12s ease-out';
+      });
+
+      card.addEventListener('mouseleave', () => {
+        // 回到默认微倾斜
+        card.style.transform = 'perspective(800px) rotateY(-4deg) rotateX(2deg)';
+        card.style.transition = 'transform 0.45s cubic-bezier(.2,.9,.3,1)';
+      });
     });
   }
   function withBaseSafe(p: string): string {
