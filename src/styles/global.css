@@ -247,7 +247,70 @@ img { max-width: 100%; height: auto; }
 .hero-stats .sep { opacity: 0.5; }
 .hero-stats strong { color: #fff; }
 
+/* ---------------- 横向摄影卡片流 ---------------- */
+.photo-marquee {
+  margin: 26px 0 30px;
+}
+.marquee-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+.marquee-title { font-weight: 700; font-size: 1.15rem; color: var(--text); }
+.marquee-sub { font-size: 0.85rem; color: var(--text-faint); }
+.marquee-viewport {
+  position: relative;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+}
+.marquee-track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  animation: marquee-scroll 30s linear infinite;
+  will-change: transform;
+}
+.marquee-viewport:hover .marquee-track { animation-play-state: paused; }
+.marquee-card {
+  flex: 0 0 auto;
+  width: 220px;
+  height: 150px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, filter 0.25s ease;
+  transform: perspective(900px) rotateY(-6deg);
+}
+.marquee-card:hover {
+  transform: perspective(900px) rotateY(0deg) scale(1.06);
+  box-shadow: var(--shadow-hover);
+  filter: brightness(1.05);
+  z-index: 2;
+}
+.marquee-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  pointer-events: none;
+}
+@keyframes marquee-scroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+@media (max-width: 640px) {
+  .marquee-card { width: 160px; height: 112px; }
+  .marquee-track { gap: 10px; }
+}
+
 @media (prefers-color-scheme: dark) {
+  .hero {
   .hero {
     background: linear-gradient(135deg, #0284c7 0%, #6366f1 45%, #a855f7 75%, #db2777 100%);
   }

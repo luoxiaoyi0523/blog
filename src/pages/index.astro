@@ -16,6 +16,23 @@ const pagePosts = posts.slice(0, pageSize);
 const currentPage = 1;
 
 const QQ_NUMBER = '1707127199';
+
+// 读取摄影文件夹全部图片，构建时转成带 /blog/ 前缀的 URL 数组，
+// 客户端每次刷新随机抽几张做成横向滚动卡片流。
+// 注意：glob 返回的 meta.src 有时已带 base 前缀，这里先归一化再去重加前缀。
+const BASE = import.meta.env.BASE_URL;
+function normSrc(src: string): string {
+  let s = src;
+  if (s.startsWith(BASE)) s = s.slice(BASE.length);
+  s = s.replace(/^\/+/, '');
+  return BASE + s;
+}
+const photoModules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif}', {
+  eager: true,
+});
+const allPhotos: string[] = Object.values(photoModules).map(
+  (m: any) => normSrc(m.default.src as string)
+);
 ---
 
 <BaseLayout title={SITE.title} description={SITE.description}>
@@ -41,6 +58,20 @@ const QQ_NUMBER = '1707127199';
     </div>
   </section>
 
+  {
+    allPhotos.length > 0 && (
+      <section class="photo-marquee" data-photos={JSON.stringify(allPhotos)} aria-label="摄影卡片流">
+        <div class="marquee-head">
+          <span class="marquee-title">📷 随机拾光</span>
+          <span class="marquee-sub">每次刷新，随机几张</span>
+        </div>
+        <div class="marquee-viewport">
+          <div class="marquee-track" id="marqueeTrack"></div>
+        </div>
+      </section>
+    )
+  }
+
   <div class="post-list">
     {pagePosts.map((post) => <PostCard post={post} />)}
   </div>
@@ -63,7 +94,6 @@ const QQ_NUMBER = '1707127199';
         btn.classList.remove('copied');
       }, 1800);
     }).catch(() => {
-      // fallback：用 textarea 复制
       const ta = document.createElement('textarea');
       ta.value = qq;
       ta.style.position = 'fixed';
@@ -78,9 +108,53 @@ const QQ_NUMBER = '1707127199';
       setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1800);
     });
   });
-
-  // 悬浮提示（CSS tooltip 由 :hover::after 实现，这里加个 data 属性辅助）
   document.querySelectorAll('.qq-btn').forEach((btn) => {
     btn.setAttribute('title', '点击复制 QQ 号');
   });
+
+  // ── 横向随机摄影卡片流（每次刷新随机抽几张） ──
+  function buildMarquee() {
+    const wrap = document.querySelector<HTMLElement>('.photo-marquee');
+    const track = document.getElementById('marqueeTrack');
+    if (!wrap || !track) return;
+    if (track.dataset.built) return; // 避免 View Transitions 重复构建
+    const all: string[] = JSON.parse(wrap.dataset.photos || '[]');
+    if (!all.length) return;
+
+    // 洗牌
+    const shuffled = [...all];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    // 随机抽 6~9 张（不超过总数）
+    const count = Math.min(all.length, 6 + Math.floor(Math.random() * 4));
+    const picked = shuffled.slice(0, count);
+
+    // 复制一份用于无缝循环
+    const set = [...picked, ...picked];
+    track.innerHTML = set
+      .map(
+        (src) =>
+          `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="lazy" /></a>`
+      )
+      .join('');
+    track.dataset.built = '1';
+
+    // 根据内容宽度微调动画时长，保证速度一致
+    const speed = 70; // px/秒
+    requestAnimationFrame(() => {
+      const w = track.scrollWidth / 2;
+      track.style.animationDuration = `${Math.max(12, w / speed)}s`;
+    });
+  }
+  function withBaseSafe(p: string): string {
+    const base = (document.querySelector('meta[name="base"]') as HTMLMetaElement)?.content || '';
+    if (p.startsWith('http') || p.startsWith('//')) return p;
+    if (p.startsWith('/')) return base.replace(/\/$/, '') + p;
+    return base + p;
+  }
+
+  buildMarquee();
+  document.addEventListener('astro:page-load', buildMarquee);
 </script>
