@@ -2,6 +2,8 @@
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { SITE, SOCIAL } from '../consts';
 import { withBase } from '../utils/path';
+
+const QQ_NUMBER = '1707127199';
 ---
 
 <BaseLayout title="关于" description={`关于 ${SITE.author}`}>
@@ -16,6 +18,7 @@ import { withBase } from '../utils/path';
       {SOCIAL.map((s) => (
         <a class="btn ghost" href={s.href} target="_blank" rel="noopener noreferrer">{s.label}</a>
       ))}
+      <button class="btn ghost qq-btn" data-qq={QQ_NUMBER}>📮 QQ: {QQ_NUMBER}</button>
     </div>
   </div>
 
@@ -61,3 +64,26 @@ import { withBase } from '../utils/path';
   .about-tag { color: var(--text-muted); margin: 0 0 16px; }
   .about-social { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 </style>
+
+<script>
+  // ── QQ 号一键复制（与首页一致） ──
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('.qq-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+    const qq = btn.dataset.qq ?? '';
+    const copy = () => navigator.clipboard.writeText(qq);
+    const done = () => {
+      const orig = btn.innerHTML;
+      btn.innerHTML = '✅ 已复制！';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.innerHTML = orig; btn.classList.remove('copied'); }, 1800);
+    };
+    copy().then(done).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = qq; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); done();
+    });
+  });
+  document.querySelectorAll('.qq-btn').forEach((btn) => btn.setAttribute('title', '点击复制 QQ 号'));
+</script>
