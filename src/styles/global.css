@@ -78,6 +78,8 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  /* 关闭移动端浏览器「下拉刷新 / 顶部加载进度条」（overscroll 指示器），不影响正常滚动 */
+  overscroll-behavior-y: none;
 }
 
 a { color: var(--accent-strong); text-decoration: none; }
