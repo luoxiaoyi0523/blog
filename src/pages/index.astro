@@ -167,11 +167,12 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
     btn.setAttribute('title', '点击复制 QQ 号');
   });
 
-  // ── 横向随机摄影卡片流（鼠标跟随 3D 倾斜 + rAF 真无缝循环） ──
+  // ── 横向随机摄影卡片流（可拖拽 / 触摸 / 滚轮 + 惯性 + 鼠标跟随 3D 倾斜） ──
   function buildMarquee() {
     const wrap = document.querySelector<HTMLElement>('.photo-marquee');
     const track = document.getElementById('marqueeTrack');
-    if (!wrap || !track) return;
+    const viewport = wrap?.querySelector<HTMLElement>('.marquee-viewport');
+    if (!wrap || !track || !viewport) return;
     if (track.dataset.built) return;
     const all: { src: string; id: string }[] = JSON.parse(wrap.dataset.photos || '[]');
     if (!all.length) return;
@@ -189,45 +190,14 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
     const unitCount = picked.length;
 
     const cardHtml = (item: { src: string; id: string }) =>
-      `<a class="marquee-card" href="${withBaseSafe('photos/')}#${encodeURIComponent(item.id)}"><img src="${item.src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" /></a>`;
+      `<a class="marquee-card" href="${withBaseSafe('photos/')}#${encodeURIComponent(item.id)}"><img src="${item.src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" draggable="false" /></a>`;
 
-    // ── rAF 无缝滚动引擎 ──
-    let pos = 0;
-    let oneSetWidth = 0;
-    let running = true;
-    let lastTime: number | null = null;
-    const SPEED = 55;
-
-    function tick(now: number) {
-      if (!running) { lastTime = null; requestAnimationFrame(tick); return; }
-      if (lastTime === null) { lastTime = now; }
-      const dt = (now - lastTime) / 1000;
-      lastTime = now;
-
-      pos -= SPEED * dt;
-      // 对一份周期取模：滚过即瞬间回到对应位置，第 2 份与第 1 份完全相同，肉眼不可见
-      if (oneSetWidth > 0) {
-        pos %= oneSetWidth;
-      }
-      // translate3d 强制 GPU 合成层，滚动不触发主线程重绘
-      track.style.transform = `translate3d(${pos}px, 0, 0)`;
-      requestAnimationFrame(tick);
-    }
-
-    // 鼠标悬停暂停 / 离开恢复（监听容器，不受内部卡片重建影响）
-    const viewport = wrap.querySelector<HTMLElement>('.marquee-viewport');
-    if (viewport) {
-      viewport.addEventListener('mouseenter', () => { running = false; });
-      viewport.addEventListener('mouseleave', () => { running = true; });
-    }
-
-    // 两阶段构建：先放 1 份测宽，再按视口宽度补足份数，
-    // 保证轨道总宽 ≥ 视口宽 + 1 份，回弹时视口右侧永远不会露白；份数封顶 6 避免 DOM 爆炸
+    // 两阶段构建：先放 1 份测宽，再按视口宽度补足份数（封顶 6，避免 DOM 爆炸）
     track.innerHTML = picked.map(cardHtml).join('');
     track.dataset.built = '1';
 
     requestAnimationFrame(() => {
-      const vw = viewport ? viewport.clientWidth : window.innerWidth;
+      const vw = viewport.clientWidth;
       const unitW = track.scrollWidth || unitCount * (220 + 16);
       const needed = Math.min(6, Math.max(2, Math.ceil((vw + unitW) / unitW)));
 
@@ -237,10 +207,9 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 
       const cards = track.querySelectorAll<HTMLElement>('.marquee-card');
       // 循环周期 = 第 2 份首卡相对第 1 份首卡的偏移（含 gap，零误差）
-      oneSetWidth = cards.length > unitCount
+      const oneSetWidth = cards.length > unitCount
         ? (cards[unitCount] as HTMLElement).offsetLeft - (cards[0] as HTMLElement).offsetLeft
         : track.scrollWidth;
-      if (oneSetWidth > 0) requestAnimationFrame(tick);
 
       // ── 鼠标跟随 3D 倾斜（必须在重建后绑定到新卡片） ──
       cards.forEach((card) => {
@@ -248,9 +217,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
           const rect = card.getBoundingClientRect();
           const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
           const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
-          const rotY = nx * 14;
-          const rotX = -ny * 10;
-          card.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
+          card.style.transform = `perspective(800px) rotateY(${nx * 14}deg) rotateX(${-ny * 10}deg)`;
           card.style.transition = 'transform 0.12s ease-out';
         });
         card.addEventListener('mouseleave', () => {
@@ -258,6 +225,79 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
           card.style.transition = 'transform 0.45s cubic-bezier(.2,.9,.3,1)';
         });
       });
+
+      // ── 拖拽 / 触摸 / 滚轮 滚动控制器（松手带惯性，无限循环） ──
+      let pos = 0;              // 轨道位移（负值=向左）
+      let isDown = false;
+      let startX = 0, startPos = 0, lastX = 0, lastT = 0, velocity = 0, moved = 0;
+      let momentumId = 0;
+      let suppressClick = false;
+
+      // 把任意位移折叠到 [-oneSetWidth, 0)，内容重复故视觉无缝
+      const wrapPos = (p: number) => {
+        if (oneSetWidth <= 0) return p;
+        let r = p % oneSetWidth;
+        if (r > 0) r -= oneSetWidth;
+        return r;
+      };
+      const apply = () => { track.style.transform = `translate3d(${pos}px,0,0)`; };
+      const stopMomentum = () => { if (momentumId) { cancelAnimationFrame(momentumId); momentumId = 0; } };
+
+      const onDown = (e: PointerEvent) => {
+        isDown = true;
+        stopMomentum();
+        startX = e.clientX; startPos = pos; lastX = e.clientX; lastT = performance.now();
+        velocity = 0; moved = 0;
+        viewport.classList.add('dragging');
+        viewport.setPointerCapture?.(e.pointerId);
+      };
+      const onMove = (e: PointerEvent) => {
+        if (!isDown) return;
+        const dx = e.clientX - startX;
+        moved = Math.max(moved, Math.abs(dx));
+        pos = wrapPos(startPos + dx);
+        apply();
+        const now = performance.now();
+        const dt = now - lastT;
+        if (dt > 0) velocity = (e.clientX - lastX) / dt; // px/ms
+        lastX = e.clientX; lastT = now;
+      };
+      const onUp = (e: PointerEvent) => {
+        if (!isDown) return;
+        isDown = false;
+        viewport.classList.remove('dragging');
+        viewport.releasePointerCapture?.(e.pointerId);
+        if (moved > 6) suppressClick = true; // 拖拽过则不触发卡片链接跳转
+        const step = () => {
+          if (isDown) { momentumId = 0; return; }
+          if (Math.abs(velocity) < 0.02) { momentumId = 0; return; }
+          pos = wrapPos(pos + velocity * 16);
+          apply();
+          velocity *= 0.93;
+          momentumId = requestAnimationFrame(step);
+        };
+        momentumId = requestAnimationFrame(step);
+      };
+
+      // 捕获阶段拦截点击：拖拽误触时阻止跳转到摄影页
+      viewport.addEventListener('click', (e) => {
+        if (suppressClick) { e.preventDefault(); e.stopPropagation(); suppressClick = false; }
+      }, true);
+
+      // 鼠标滚轮 / 触控板横向滚动
+      viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        stopMomentum();
+        pos = wrapPos(pos - (e.deltaY + e.deltaX));
+        apply();
+      }, { passive: false });
+
+      viewport.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+      window.addEventListener('pointercancel', onUp);
+
+      apply();
     });
   }
 

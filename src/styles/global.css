@@ -316,7 +316,14 @@ img { max-width: 100%; height: auto; }
   contain: layout paint;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
+  /* 可拖拽：抓取手势 + 禁止选择 / 原生拖图 / 移动端横滑交给我们 */
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
 }
+.marquee-viewport.dragging { cursor: grabbing; }
 .marquee-track {
   display: flex;
   gap: 16px;
@@ -349,6 +356,8 @@ img { max-width: 100%; height: auto; }
   object-fit: cover;
   display: block;
   pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
   border-radius: 16px;
   backface-visibility: hidden;
   /* 图片稍大一点，避免 hover 放大时边缘露底色 */
