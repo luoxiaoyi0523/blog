@@ -263,6 +263,8 @@ img { max-width: 100%; height: auto; }
 .marquee-viewport {
   position: relative;
   overflow: hidden;
+  /* 把重绘范围限制在本容器内，滚动时不波及整页 */
+  contain: layout paint;
   -webkit-mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
   mask-image: linear-gradient(to right, transparent, #000 5%, #000 95%, transparent);
 }
@@ -270,7 +272,10 @@ img { max-width: 100%; height: auto; }
   display: flex;
   gap: 16px;
   width: max-content;
+  /* 初始就提升到 GPU 合成层，动画全程不触发主线程重绘 */
+  transform: translate3d(0, 0, 0);
   will-change: transform;
+  backface-visibility: hidden;
 }
 
 /* 卡片基础态：无静态倾斜，由 JS 驱动鼠标跟随 */
@@ -285,9 +290,9 @@ img { max-width: 100%; height: auto; }
   background: transparent;
   transition: box-shadow 0.3s ease;
   transform-style: preserve-3d;
+  backface-visibility: hidden;
   /* 默认微倾斜 */
   transform: perspective(800px) rotateY(-4deg) rotateX(2deg);
-  will-change: transform;
 }
 .marquee-card img {
   width: 100%;
@@ -296,6 +301,7 @@ img { max-width: 100%; height: auto; }
   display: block;
   pointer-events: none;
   border-radius: 16px;
+  backface-visibility: hidden;
   /* 图片稍大一点，避免 hover 放大时边缘露底色 */
   transform: scale(1.08);
   transition: transform 0.35s cubic-bezier(.2,.9,.3,1);
@@ -303,6 +309,8 @@ img { max-width: 100%; height: auto; }
 .marquee-card:hover {
   box-shadow: var(--shadow-hover);
   z-index: 2;
+  /* 仅 hover 时占用合成层，静止时不浪费图层内存 */
+  will-change: transform;
 }
 .marquee-card:hover img {
   transform: scale(1.14);

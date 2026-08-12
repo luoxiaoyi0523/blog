@@ -5,6 +5,7 @@ import Pagination from '../components/Pagination.astro';
 import { SITE } from '../consts';
 import { withBase } from '../utils/path';
 import BaseLayout from '../layouts/BaseLayout.astro';
+import { getImage } from 'astro:assets';
 
 const posts = (await getCollection('blog', ({ data }) =>
   import.meta.env.PROD ? !data.draft : true
@@ -17,9 +18,9 @@ const currentPage = 1;
 
 const QQ_NUMBER = '1707127199';
 
-// 读取摄影文件夹全部图片，构建时转成带 /blog/ 前缀的 URL 数组，
-// 客户端每次刷新随机抽几张做成横向滚动卡片流。
-// 注意：glob 返回的 meta.src 有时已带 base 前缀，这里先归一化再去重加前缀。
+// 读取摄影文件夹全部图片，构建时统一转成 440×280 的 webp 缩略图，
+// 这样运行时加载的是几十 KB 级的小图，而不是几 MB 的原图——这是解决
+// “加载时整个网站都卡”的根本手段。客户端每次刷新再随机抽几张做横向流。
 const BASE = import.meta.env.BASE_URL;
 function normSrc(src: string): string {
   let s = src;
@@ -30,8 +31,22 @@ function normSrc(src: string): string {
 const photoModules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif}', {
   eager: true,
 });
-const allPhotos: string[] = Object.values(photoModules).map(
-  (m: any) => normSrc(m.default.src as string)
+const allPhotos: string[] = await Promise.all(
+  Object.values(photoModules).map(async (m: any) => {
+    try {
+      const optimized = await getImage({
+        src: m.default,
+        width: 440,
+        height: 280,
+        format: 'webp',
+        fit: 'cover',
+      });
+      return normSrc(optimized.src);
+    } catch {
+      // 极少数情况下某张图处理失败，退化用原图，保证不崩
+      return normSrc(m.default.src as string);
+    }
+  })
 );
 ---
 
@@ -127,13 +142,14 @@ const allPhotos: string[] = Object.values(photoModules).map(
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    // 随机抽卡片（实际数量可能少于目标，比如照片很少时）
-    const count = Math.max(4, Math.min(all.length, 6 + Math.floor(Math.random() * 4)));
-    const picked = shuffled.slice(0, count); // 一个循环单元，长度 = min(count, 照片数)
+    // 随机抽卡片：照片少就全用，多则抽 6~8 张（控制 DOM 数量，避免卡顿）
+    const target = all.length <= 8 ? all.length : 6 + Math.floor(Math.random() * 3);
+    const count = Math.max(4, Math.min(all.length, target));
+    const picked = shuffled.slice(0, count);
     const unitCount = picked.length;
 
     const cardHtml = (src: string) =>
-      `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="lazy" /></a>`;
+      `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" /></a>`;
 
     // ── rAF 无缝滚动引擎 ──
     let pos = 0;
@@ -153,7 +169,8 @@ const allPhotos: string[] = Object.values(photoModules).map(
       if (oneSetWidth > 0) {
         pos %= oneSetWidth;
       }
-      track.style.transform = `translateX(${pos}px)`;
+      // translate3d 强制 GPU 合成层，滚动不触发主线程重绘
+      track.style.transform = `translate3d(${pos}px, 0, 0)`;
       requestAnimationFrame(tick);
     }
 
@@ -165,14 +182,14 @@ const allPhotos: string[] = Object.values(photoModules).map(
     }
 
     // 两阶段构建：先放 1 份测宽，再按视口宽度补足份数，
-    // 保证轨道总宽 ≥ 视口宽*2 + 1 份，回弹时视口右侧永远不会露白
+    // 保证轨道总宽 ≥ 视口宽 + 1 份，回弹时视口右侧永远不会露白；份数封顶 6 避免 DOM 爆炸
     track.innerHTML = picked.map(cardHtml).join('');
     track.dataset.built = '1';
 
     requestAnimationFrame(() => {
       const vw = viewport ? viewport.clientWidth : window.innerWidth;
       const unitW = track.scrollWidth || unitCount * (220 + 16);
-      const needed = Math.max(2, Math.ceil((vw * 2 + unitW) / unitW));
+      const needed = Math.min(6, Math.max(2, Math.ceil((vw + unitW) / unitW)));
 
       let full = '';
       for (let i = 0; i < needed; i++) full += picked.map(cardHtml).join('');
