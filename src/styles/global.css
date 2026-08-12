@@ -372,8 +372,7 @@ img { max-width: 100%; height: auto; }
 
 @media (prefers-color-scheme: dark) {
   .hero {
-  .hero {
-    background: linear-gradient(135deg, #0284c7 0%, #6366f1 45%, #a855f7 75%, #db2777 100%);
+    background: url('/blog/hero-bg.jpg') center/cover no-repeat;
   }
 }
 [data-theme="dark"] .hero {
