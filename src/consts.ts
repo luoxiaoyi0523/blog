@@ -17,6 +17,7 @@ export const NAV_LINKS = [
   { href: '/', label: '首页' },
   { href: '/photos/', label: '相册' },
   { href: '/posts/', label: '文章' },
+  { href: '/games/', label: '游戏' },
   { href: '/about/', label: '关于' },
   { href: '/rss.xml', label: 'RSS' },
 ];

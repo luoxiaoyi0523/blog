@@ -1,0 +1,252 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { SITE } from '../../consts';
+---
+
+<BaseLayout title="游戏" description="敲木鱼小游戏，轻点木鱼积攒功德。">
+  <section class="game-page">
+    <div class="section-head">
+      <h1>🪵 敲木鱼</h1>
+      <p class="game-sub">轻点木鱼，心静自然凉 · 积攒你的功德</p>
+    </div>
+
+    <div class="woodfish-stage">
+      <button class="woodfish" id="woodfish" aria-label="敲木鱼" title="敲一下">
+        <svg viewBox="0 0 220 180" width="220" height="180" aria-hidden="true">
+          <defs>
+            <radialGradient id="woodGrad" cx="40%" cy="32%" r="80%">
+              <stop offset="0%" stop-color="#d49154" />
+              <stop offset="55%" stop-color="#a4632a" />
+              <stop offset="100%" stop-color="#7c4518" />
+            </radialGradient>
+          </defs>
+          <!-- 落地阴影 -->
+          <ellipse cx="110" cy="162" rx="72" ry="12" fill="rgba(0,0,0,0.18)" />
+          <!-- 顶部握把钮 -->
+          <circle cx="110" cy="30" r="15" fill="url(#woodGrad)" stroke="#5e3310" stroke-width="3" />
+          <!-- 木鱼主体 -->
+          <path d="M110 30 C 172 30, 206 72, 206 110 C 206 148, 168 170, 110 170 C 52 170, 14 148, 14 110 C 14 72, 48 30, 110 30 Z"
+                fill="url(#woodGrad)" stroke="#5e3310" stroke-width="3" />
+          <!-- 缺口（木鱼开口） -->
+          <path d="M56 122 C 82 144, 138 144, 164 122 C 150 136, 70 136, 56 122 Z" fill="#3d2208" />
+          <!-- 高光 -->
+          <ellipse cx="78" cy="72" rx="28" ry="16" fill="rgba(255,255,255,0.18)" />
+        </svg>
+      </button>
+
+      <!-- 浮动「功德 +1」层 -->
+      <div class="pop-layer" id="popLayer" aria-hidden="true"></div>
+    </div>
+
+    <div class="merit-board">
+      <div class="merit-item">
+        <span class="merit-num" id="todayMerit">0</span>
+        <span class="merit-label">今日功德</span>
+      </div>
+      <div class="merit-divider"></div>
+      <div class="merit-item">
+        <span class="merit-num" id="totalMerit">0</span>
+        <span class="merit-label">总功德</span>
+      </div>
+    </div>
+
+    <div class="game-tools">
+      <button class="btn ghost sound-toggle" id="soundToggle" aria-pressed="true">🔊 声音：开</button>
+      <button class="btn ghost" id="resetBtn">🔄 重置今日</button>
+    </div>
+
+    <p class="game-tip">小贴士：鼠标点击、手机轻触、或键盘聚焦后按空格 / 回车都能敲。功德会自动保存在你的浏览器里。</p>
+  </section>
+</BaseLayout>
+
+<style>
+  .game-page { padding: 8px 0 10px; }
+  .section-head { text-align: center; margin-bottom: 14px; }
+  .section-head h1 { font-size: 1.6rem; margin: 0 0 4px; color: var(--text); }
+  .game-sub { color: var(--text-muted); margin: 0; font-size: 0.95rem; }
+
+  .woodfish-stage {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 10px auto 6px;
+    height: 220px;
+  }
+  .woodfish {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    line-height: 0;
+    filter: drop-shadow(0 10px 18px rgba(124, 69, 24, 0.35));
+    transition: transform 0.09s ease-out;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    outline: none;
+  }
+  .woodfish:active { transform: scale(0.93); }
+  .woodfish:focus-visible { transform: scale(0.97); }
+  .woodfish svg { display: block; user-select: none; pointer-events: none; }
+
+  .pop-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .merit-pop {
+    position: absolute;
+    left: 50%;
+    top: 38%;
+    transform: translateX(-50%);
+    color: #ffd86b;
+    font-weight: 700;
+    font-size: 1.15rem;
+    text-shadow: 0 1px 5px rgba(0, 0, 0, 0.45);
+    white-space: nowrap;
+    animation: popUp 1s ease-out forwards;
+  }
+  @keyframes popUp {
+    0%   { opacity: 0; transform: translate(-50%, 6px) scale(0.8); }
+    18%  { opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -78px) scale(1.12); }
+  }
+
+  .merit-board {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 22px;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 16px 22px;
+    max-width: 360px;
+    margin: 8px auto 16px;
+  }
+  .merit-item { display: flex; flex-direction: column; align-items: center; min-width: 86px; }
+  .merit-num { font-size: 1.9rem; font-weight: 700; color: var(--accent-strong); line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .merit-label { font-size: 0.82rem; color: var(--text-muted); margin-top: 2px; }
+  .merit-divider { width: 1px; height: 38px; background: var(--border); }
+
+  .game-tools { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .game-tip { text-align: center; color: var(--text-faint); font-size: 0.82rem; max-width: 460px; margin: 0 auto; }
+</style>
+
+<script>
+  // ── 敲木鱼小游戏 ──
+  const STORE_TOTAL = 'woodfish_total';
+  const STORE_TODAY = 'woodfish_today';
+  const STORE_DATE = 'woodfish_date';
+
+  const todayStr = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  };
+
+  function loadTotal(): number {
+    return parseInt(localStorage.getItem(STORE_TOTAL) || '0', 10) || 0;
+  }
+  function loadToday(): number {
+    const date = localStorage.getItem(STORE_DATE);
+    if (date !== todayStr()) {
+      localStorage.setItem(STORE_TODAY, '0');
+      localStorage.setItem(STORE_DATE, todayStr());
+      return 0;
+    }
+    return parseInt(localStorage.getItem(STORE_TODAY) || '0', 10) || 0;
+  }
+
+  const fish = document.getElementById('woodfish') as HTMLButtonElement | null;
+  const popLayer = document.getElementById('popLayer');
+  const todayEl = document.getElementById('todayMerit');
+  const totalEl = document.getElementById('totalMerit');
+  const soundBtn = document.getElementById('soundToggle') as HTMLButtonElement | null;
+  const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
+
+  let today = loadToday();
+  let total = loadTotal();
+  let muted = false;
+  let audioCtx: AudioContext | null = null;
+
+  function render() {
+    if (todayEl) todayEl.textContent = String(today);
+    if (totalEl) totalEl.textContent = String(total);
+  }
+  render();
+
+  // 木鱼「笃」声：低频三角波快速衰减 + 一点点噪声，纯 Web Audio 合成，无需音频文件
+  function playKnock() {
+    if (muted) return;
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AC) return;
+    if (!audioCtx) audioCtx = new AC();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(430, now);
+    osc.frequency.exponentialRampToValueAtTime(170, now + 0.09);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.55, now + 0.005);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  }
+
+  function spawnPop() {
+    if (!popLayer) return;
+    const span = document.createElement('span');
+    span.className = 'merit-pop';
+    span.textContent = '功德 +1';
+    // 轻微随机水平偏移，避免每次都叠在同一位置
+    span.style.left = `${48 + (Math.random() * 8 - 4)}%`;
+    popLayer.appendChild(span);
+    setTimeout(() => span.remove(), 1000);
+  }
+
+  function knock() {
+    today += 1;
+    total += 1;
+    localStorage.setItem(STORE_TODAY, String(today));
+    localStorage.setItem(STORE_TOTAL, String(total));
+    localStorage.setItem(STORE_DATE, todayStr());
+    render();
+    playKnock();
+    spawnPop();
+    // 处理掉 active 状态后强制回弹（键盘触发时也给点反馈）
+    if (fish) {
+      fish.style.transform = 'scale(0.9)';
+      setTimeout(() => { if (fish) fish.style.transform = ''; }, 90);
+    }
+  }
+
+  if (fish) {
+    fish.addEventListener('pointerdown', (e) => { e.preventDefault(); knock(); });
+    fish.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); knock(); }
+    });
+  }
+
+  if (soundBtn) {
+    soundBtn.addEventListener('click', () => {
+      muted = !muted;
+      soundBtn.textContent = muted ? '🔇 声音：关' : '🔊 声音：开';
+      soundBtn.setAttribute('aria-pressed', String(!muted));
+    });
+  }
+
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      today = 0;
+      localStorage.setItem(STORE_TODAY, '0');
+      localStorage.setItem(STORE_DATE, todayStr());
+      render();
+    });
+  }
+</script>
