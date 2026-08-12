@@ -156,10 +156,11 @@ const allPhotos: string[] = Object.values(photoModules).map(
 
       pos -= SPEED * dt;
 
-      // 核心无缝逻辑：滚过一份宽度后瞬间回弹
+      // 核心无缝逻辑：对一份宽度取模，滚过即瞬间回到对应位置
       // 因为第 2 份和第 1 份内容完全相同，回弹瞬间肉眼不可见
-      if (oneSetWidth > 0 && pos <= -oneSetWidth) {
-        pos += oneSetWidth;
+      // 用取模而非 if，可兼容后台标签页 dt 过大造成的跳变
+      if (oneSetWidth > 0) {
+        pos %= oneSetWidth;
       }
 
       track.style.transform = `translateX(${pos}px)`;
@@ -169,14 +170,10 @@ const allPhotos: string[] = Object.values(photoModules).map(
     // 等布局完成后再启动，获取精确宽度
     requestAnimationFrame(() => {
       const cards = track.querySelectorAll<HTMLElement>('.marquee-card');
-      if (cards.length < count) return;
-      let w = 0;
-      const style = getComputedStyle(track);
-      const gap = parseFloat(style.gap) || 16;
-      for (let i = 0; i < count; i++) {
-        w += cards[i].offsetWidth + (i < count - 1 ? gap : 0);
-      }
-      oneSetWidth = w;
+      if (cards.length < count + 1) return;
+      // 第 2 份第一张卡片相对第 1 份第一张的偏移 = 真正的循环周期
+      // （直接读 offsetLeft，自动包含卡片间的 gap，避免回弹差一截导致顿挫）
+      oneSetWidth = (cards[count] as HTMLElement).offsetLeft - (cards[0] as HTMLElement).offsetLeft;
       if (oneSetWidth > 0) {
         requestAnimationFrame(tick);
       }
