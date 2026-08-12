@@ -303,12 +303,23 @@ img { max-width: 100%; height: auto; }
 .marquee-head {
   display: flex;
   align-items: baseline;
+  justify-content: space-between;
   gap: 12px;
   margin-bottom: 12px;
   padding: 0 2px;
 }
 .marquee-title { font-weight: 700; font-size: 1.15rem; color: var(--text); }
 .marquee-sub { font-size: 0.85rem; color: var(--text-faint); }
+.marquee-more {
+  font-size: 0.85rem;
+  color: var(--accent);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.15s;
+}
+.marquee-more:hover { color: var(--accent-strong); text-decoration: underline; }
+
+.random-posts { margin: 26px 0 30px; }
 .marquee-viewport {
   position: relative;
   overflow: hidden;

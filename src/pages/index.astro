@@ -1,20 +1,15 @@
 ---
 import { getCollection } from 'astro:content';
 import PostCard from '../components/PostCard.astro';
-import Pagination from '../components/Pagination.astro';
 import { SITE } from '../consts';
 import { withBase } from '../utils/path';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { getImage } from 'astro:assets';
 
-const posts = (await getCollection('blog', ({ data }) =>
+// 全部文章按时间倒序，首页随机挑几篇展示（客户端洗牌）
+const allPosts = (await getCollection('blog', ({ data }) =>
   import.meta.env.PROD ? !data.draft : true
 )).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
-
-const pageSize = SITE.pageSize;
-const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
-const pagePosts = posts.slice(0, pageSize);
-const currentPage = 1;
 
 // 读取摄影文件夹全部图片，构建时统一转成 440×280 的 webp 缩略图，
 // 这样运行时加载的是几十 KB 级的小图，而不是几 MB 的原图——这是解决
@@ -82,11 +77,18 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
     )
   }
 
-  <div class="post-list">
-    {pagePosts.map((post) => <PostCard post={post} />)}
-  </div>
-
-  <Pagination currentPage={currentPage} totalPages={totalPages} />
+  <!-- 随机文章：每次刷新从全部文章中随机挑 3 篇（手机端 2 篇）展示 -->
+  {allPosts.length > 0 && (
+    <section class="random-posts" aria-label="随机文章">
+      <div class="marquee-head">
+        <span class="marquee-title">📝 随机文章</span>
+        <a class="marquee-more" href={withBase('posts/')}>查看全部 →</a>
+      </div>
+      <div class="post-list" id="randomPostList">
+        {allPosts.map((post) => <PostCard post={post} />)}
+      </div>
+    </section>
+  )}
 </BaseLayout>
 
 <script>
@@ -275,4 +277,31 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 
   buildMarquee();
   document.addEventListener('astro:page-load', buildMarquee);
+
+  // ── 随机文章：每次加载从全部文章中随机挑 3 篇（手机端 2 篇）展示 ──
+  function initRandomPosts() {
+    const list = document.getElementById('randomPostList');
+    if (!list || list.dataset.inited) return;
+    list.dataset.inited = '1';
+
+    const items = Array.from(list.children) as HTMLElement[];
+    if (items.length === 0) return;
+
+    // 桌面端 3 篇，手机端（≤640px）2 篇
+    const isMobile = window.matchMedia('(max-width: 640px)').matches;
+    const showCount = isMobile ? 2 : 3;
+
+    // Fisher-Yates 洗牌后取前 N 篇
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      list.insertBefore(items[j], items[i]);
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+
+    items.forEach((el, idx) => {
+      el.style.display = idx < showCount ? '' : 'none';
+    });
+  }
+  initRandomPosts();
+  document.addEventListener('astro:page-load', initRandomPosts);
 </script>
