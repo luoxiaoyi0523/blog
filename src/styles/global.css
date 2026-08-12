@@ -213,17 +213,33 @@ img { max-width: 100%; height: auto; }
   text-align: center;
   padding: 40px 24px 32px;
 }
-.hero-avatar {
-  width: 80px; height: 80px;
-  margin: 0 auto 16px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-  display: grid; place-items: center;
-  overflow: hidden;
-  border: 3px solid rgba(255,255,255,0.4);
+.hero-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0 auto 18px;
 }
-.hero-avatar img { width: 80px; height: 80px; object-fit: cover; }
+.clock-time {
+  font-size: 2.6rem;
+  font-weight: 300;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-shadow: 0 2px 16px rgba(0,0,0,0.35);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.clock-date {
+  font-size: 0.92rem;
+  color: rgba(255,255,255,0.85);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+}
+.clock-week {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.7);
+  font-weight: 400;
+}
 .hero h1 {
   font-size: 2rem;
   margin: 0 0 8px;

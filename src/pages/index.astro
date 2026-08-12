@@ -48,8 +48,10 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 <BaseLayout title={SITE.title} description={SITE.description}>
   <section class="hero">
     <div class="hero-inner container">
-      <div class="hero-avatar">
-        <img src={withBase('avatar.jpg')} alt="" />
+      <div class="hero-clock" aria-live="polite">
+        <span class="clock-time" id="clockTime">00:00:00</span>
+        <span class="clock-date" id="clockDate">0000年00月00日</span>
+        <span class="clock-week" id="clockWeek">星期一</span>
       </div>
       <h1>鱼板的自留地</h1>
       <p class="hero-tag quote-wrap" data-quotes='["生活不是等待风暴过去，而是学会在雨中跳舞。", "你不必等到万事俱备才出发，光是你自己就足够了。", "所谓自由，不是随心所欲，而是主宰自己。", "世界很大，书本就是窗户。", "每一个不曾起舞的日子，都是对生命的辜负。", "保持热爱，奔赴山海。", "星光不问赶路人，时光不负有心人。", "愿你历尽千帆，归来仍是少年。", "种一棵树最好的时间是十年前，其次是现在。", "人生没有白走的路，每一步都算数。", "与其向往，不如成为。", "温柔半两，从容一生。"]'>
@@ -136,6 +138,22 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
   }
   initQuote();
   document.addEventListener('astro:page-load', initQuote);
+
+  // ── 实时时钟：时间 + 日期 + 星期，每秒更新 ──
+  const WEEK_DAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+  function pad(n: number): string { return n < 10 ? '0' + n : String(n); }
+  function updateClock() {
+    const now = new Date();
+    const timeEl = document.getElementById('clockTime');
+    const dateEl = document.getElementById('clockDate');
+    const weekEl = document.getElementById('clockWeek');
+    if (timeEl) timeEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    if (dateEl) dateEl.textContent = `${now.getFullYear()}年${pad(now.getMonth() + 1)}月${pad(now.getDate())}日`;
+    if (weekEl) weekEl.textContent = WEEK_DAYS[now.getDay()];
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+  document.addEventListener('astro:page-load', () => { updateClock(); });
 
   // ── QQ 号一键复制（仅作用于关于页等仍带 .qq-btn 的地方） ──
   document.addEventListener('click', (e) => {
