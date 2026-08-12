@@ -31,8 +31,10 @@ function normSrc(src: string): string {
 const photoModules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif}', {
   eager: true,
 });
-const allPhotos: string[] = await Promise.all(
-  Object.values(photoModules).map(async (m: any) => {
+// 每条记录带 id（文件名去扩展名），供卡片流点击后跳转到摄影页对应照片
+const allPhotos: { src: string; id: string }[] = await Promise.all(
+  Object.entries(photoModules).map(async ([path, m]: [string, any]) => {
+    const id = (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '');
     try {
       const optimized = await getImage({
         src: m.default,
@@ -41,10 +43,10 @@ const allPhotos: string[] = await Promise.all(
         format: 'webp',
         fit: 'cover',
       });
-      return normSrc(optimized.src);
+      return { src: normSrc(optimized.src), id };
     } catch {
       // 极少数情况下某张图处理失败，退化用原图，保证不崩
-      return normSrc(m.default.src as string);
+      return { src: normSrc(m.default.src as string), id };
     }
   })
 );
@@ -133,7 +135,7 @@ const allPhotos: string[] = await Promise.all(
     const track = document.getElementById('marqueeTrack');
     if (!wrap || !track) return;
     if (track.dataset.built) return;
-    const all: string[] = JSON.parse(wrap.dataset.photos || '[]');
+    const all: { src: string; id: string }[] = JSON.parse(wrap.dataset.photos || '[]');
     if (!all.length) return;
 
     // 洗牌
@@ -148,8 +150,8 @@ const allPhotos: string[] = await Promise.all(
     const picked = shuffled.slice(0, count);
     const unitCount = picked.length;
 
-    const cardHtml = (src: string) =>
-      `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" /></a>`;
+    const cardHtml = (item: { src: string; id: string }) =>
+      `<a class="marquee-card" href="${withBaseSafe('photos/')}#${encodeURIComponent(item.id)}"><img src="${item.src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" /></a>`;
 
     // ── rAF 无缝滚动引擎 ──
     let pos = 0;

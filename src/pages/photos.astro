@@ -12,8 +12,9 @@ const photos = Object.entries(modules)
   .map(([path, mod]) => {
     const meta = (mod as any).default;
     const base = path.split('/').pop() ?? '';
-    const caption = base.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ');
-    return { src: meta.src as string, caption };
+    const id = base.replace(/\.[^.]+$/, '');
+    const caption = id.replace(/[-_]+/g, ' ');
+    return { src: meta.src as string, caption, id };
   })
   .sort((a, b) => a.caption.localeCompare(b.caption));
 ---
@@ -35,7 +36,7 @@ const photos = Object.entries(modules)
     ) : (
       <div class="gallery">
         {photos.map((p, i) => (
-          <figure class="photo" data-i={i} data-full={p.src} data-cap={p.caption}>
+          <figure class="photo" data-i={i} data-full={p.src} data-cap={p.caption} data-photo-id={p.id}>
             <img src={p.src} alt={p.caption} loading="lazy" />
             <figcaption>{p.caption}</figcaption>
           </figure>
@@ -99,6 +100,21 @@ const photos = Object.entries(modules)
     if (e.key === 'ArrowLeft') show(cur - 1);
     if (e.key === 'ArrowRight') show(cur + 1);
   });
+
+  // 支持从首页「随机拾光」卡片流带 #照片id 跳转进来，自动定位并打开对应照片灯箱
+  function openByHash() {
+    const h = decodeURIComponent(location.hash.replace(/^#/, ''));
+    if (!h) return;
+    const list = figs();
+    const idx = list.findIndex((f) => f.dataset.photoId === h);
+    if (idx >= 0) {
+      show(idx);
+      open();
+    }
+  }
+  if (document.readyState !== 'loading') openByHash();
+  else document.addEventListener('DOMContentLoaded', openByHash);
+  document.addEventListener('astro:page-load', openByHash);
 </script>
 
 <style>
