@@ -194,16 +194,16 @@ img { max-width: 100%; height: auto; }
   position: relative;
   margin: 18px 0 28px;
   border-radius: var(--radius);
-  background: url('/blog/hero-bg.png') center/cover no-repeat;
+  background: url('/blog/hero-bg.jpg') center/cover no-repeat;
   border: 1px solid var(--border);
   overflow: hidden;
 }
-/* 暗色遮罩，保证文字在图片上清晰可读 */
+/* 轻微暗色遮罩，保证文字可读的同时尽量透出图片色彩 */
 .hero::before {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.65) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.5) 100%);
   pointer-events: none;
   z-index: 0;
 }
@@ -377,10 +377,10 @@ img { max-width: 100%; height: auto; }
   }
 }
 [data-theme="dark"] .hero {
-  background: url('/blog/hero-bg.png') center/cover no-repeat;
+  background: url('/blog/hero-bg.jpg') center/cover no-repeat;
 }
 [data-theme="dark"] .hero::before {
-  background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.75) 100%);
+  background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.5) 60%, rgba(0,0,0,0.6) 100%);
 }
 
 /* ---------------- Post list / Cards ---------------- */
