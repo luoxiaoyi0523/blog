@@ -246,7 +246,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
         });
       });
 
-      // ── 自动滚动（rAF 真无缝循环）+ 鼠标悬停暂停 + 滚轮微调 ──
+      // ── 自动滚动（rAF 真无缝循环 + 滚轮微调，鼠标悬停不暂停，一直滚动） ──
       let pos = 0;              // 轨道位移（负值=向左）
       let running = true;
       let lastTime: number | null = null;
@@ -269,11 +269,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
       }
       if (oneSetWidth > 0) requestAnimationFrame(tick);
 
-      // 鼠标悬停暂停 / 离开恢复（监听容器，不受内部卡片重建影响）
-      viewport.addEventListener('mouseenter', () => { running = false; });
-      viewport.addEventListener('mouseleave', () => { running = true; });
-
-      // 滚轮 / 触控板横向滚动（悬停时自动滚动已暂停，滚轮自由控制；离开后自动滚动从当前位置继续）
+      // 滚轮 / 触控板横向滚动（自动滚动持续进行，滚轮自由微调；松手后自动滚动从当前位置继续）
       viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
         pos -= (e.deltaY + e.deltaX);
