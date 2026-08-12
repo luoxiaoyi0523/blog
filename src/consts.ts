@@ -15,9 +15,8 @@ export const SITE = {
 // 顶部导航。想加栏目就往这里加一项。
 export const NAV_LINKS = [
   { href: '/', label: '首页' },
-  { href: '/photos/', label: '摄影' },
-  { href: '/categories/', label: '分类' },
-  { href: '/tags/', label: '标签' },
+  { href: '/photos/', label: '相册' },
+  { href: '/posts/', label: '文章' },
   { href: '/about/', label: '关于' },
   { href: '/rss.xml', label: 'RSS' },
 ];
@@ -27,7 +26,7 @@ export const NAV_LINKS = [
 export const CATEGORY_COLORS: Record<string, string> = {
   '技术': '#0ea5e9',
   '生活': '#f59e0b',
-  '摄影': '#ec4899',
+  '相册': '#ec4899',
   '随笔': '#8b5cf6',
   '教程': '#10b981',
 };

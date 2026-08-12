@@ -1,0 +1,185 @@
+---
+import { getCollection } from 'astro:content';
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+
+// 全部文章（生产环境跳过草稿），按发布时间倒序。
+const allPosts = (await getCollection('blog', ({ data }) =>
+  import.meta.env.PROD ? !data.draft : true
+)).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+// 统计每个分类 / 标签下的文章数，供筛选面板上的徽章显示。
+const catCounts = new Map<string, number>();
+const tagCounts = new Map<string, number>();
+for (const p of allPosts) {
+  catCounts.set(p.data.category, (catCounts.get(p.data.category) ?? 0) + 1);
+  for (const t of p.data.tags) {
+    tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1);
+  }
+}
+const categories = [...catCounts.entries()].sort((a, b) => b[1] - a[1]);
+const tags = [...tagCounts.entries()].sort((a, b) => b[1] - a[1]);
+---
+
+<BaseLayout title="文章" description="全部文章，可按分类与标签筛选浏览。">
+  <div class="section-head">
+    <h1>文章 📝</h1>
+    <span class="sub" id="filterCount">{allPosts.length} 篇</span>
+  </div>
+
+  <!-- 分类 + 标签筛选面板：点击徽章即时筛选，分类与标签可组合 -->
+  <div class="filter-bar">
+    <div class="filter-group">
+      <span class="filter-label">分类</span>
+      <div class="badge-cloud cat-filter">
+        <button class="badge cat active" id="clearFilter" type="button">全部</button>
+        {categories.map(([cat, count]) => (
+          <button class="badge cat" type="button" data-cat={cat}>{cat} <span class="count">{count}</span></button>
+        ))}
+      </div>
+    </div>
+    <div class="filter-group">
+      <span class="filter-label">标签</span>
+      <div class="badge-cloud tag-filter">
+        {tags.map(([tag, count]) => (
+          <button class="badge" type="button" data-tag={tag}>#{tag} <span class="count">{count}</span></button>
+        ))}
+      </div>
+    </div>
+  </div>
+
+  <div class="post-list" id="postList">
+    {allPosts.map((post) => (
+      <div class="post-item" data-cat={post.data.category} data-tags={post.data.tags.join('|')}>
+        <PostCard post={post} />
+      </div>
+    ))}
+  </div>
+
+  <div class="filter-empty" id="filterEmpty" hidden>
+    没有符合当前筛选条件的文章，换个分类或标签试试～
+  </div>
+</BaseLayout>
+
+<script>
+  // ── 文章筛选：分类 + 标签组合过滤（客户端实时，无需跳转） ──
+  function initPostFilter() {
+    const list = document.getElementById('postList');
+    if (!list || list.dataset.inited) return;
+    list.dataset.inited = '1';
+
+    const items = Array.from(list.querySelectorAll<HTMLElement>('.post-item'));
+    const catBtns = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.cat-filter .badge[data-cat]')
+    );
+    const tagBtns = Array.from(
+      document.querySelectorAll<HTMLButtonElement>('.tag-filter .badge[data-tag]')
+    );
+    const clearBtn = document.getElementById('clearFilter') as HTMLButtonElement | null;
+    const countEl = document.getElementById('filterCount');
+    const emptyEl = document.getElementById('filterEmpty');
+
+    let activeCat = '';
+    let activeTag = '';
+
+    function apply() {
+      let shown = 0;
+      for (const el of items) {
+        const cat = el.dataset.cat || '';
+        const tags = (el.dataset.tags || '').split('|').filter(Boolean);
+        const okCat = !activeCat || cat === activeCat;
+        const okTag = !activeTag || tags.includes(activeTag);
+        const ok = okCat && okTag;
+        el.style.display = ok ? '' : 'none';
+        if (ok) shown++;
+      }
+      catBtns.forEach((b) => b.classList.toggle('active', b.dataset.cat === activeCat));
+      tagBtns.forEach((b) => b.classList.toggle('active', b.dataset.tag === activeTag));
+      if (clearBtn) clearBtn.classList.toggle('active', !activeCat && !activeTag);
+      if (countEl) countEl.textContent = shown + ' 篇';
+      if (emptyEl) emptyEl.hidden = shown > 0;
+    }
+
+    catBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        activeCat = activeCat === b.dataset.cat ? '' : (b.dataset.cat ?? '');
+        apply();
+      })
+    );
+    tagBtns.forEach((b) =>
+      b.addEventListener('click', () => {
+        activeTag = activeTag === b.dataset.tag ? '' : (b.dataset.tag ?? '');
+        apply();
+      })
+    );
+    clearBtn?.addEventListener('click', () => {
+      activeCat = '';
+      activeTag = '';
+      apply();
+    });
+
+    apply();
+  }
+
+  initPostFilter();
+  document.addEventListener('astro:page-load', initPostFilter);
+</script>
+
+<style>
+  .filter-bar {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 18px;
+    margin-bottom: 26px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .filter-group {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .filter-label {
+    flex: 0 0 auto;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding-top: 5px;
+    min-width: 32px;
+  }
+  .filter-group .badge-cloud { flex: 1; }
+
+  /* 筛选徽章是 <button>，需要重置默认按钮样式 */
+  .filter-bar button.badge {
+    cursor: pointer;
+    border: 1px solid transparent;
+    font: inherit;
+    font-size: 0.8rem;
+  }
+  .filter-bar button.badge:hover {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+  .filter-bar .badge.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .filter-bar .badge.active .count { opacity: 0.85; }
+
+  .filter-empty {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 40px 0;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 36px;
+  }
+
+  @media (max-width: 560px) {
+    .filter-group { flex-direction: column; gap: 6px; }
+    .filter-label { padding-top: 0; }
+  }
+</style>

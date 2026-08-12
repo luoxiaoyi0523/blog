@@ -29,7 +29,7 @@ function normSrc(src: string): string {
 const photoModules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif}', {
   eager: true,
 });
-// 每条记录带 id（文件名去扩展名），供卡片流点击后跳转到摄影页对应照片
+// 每条记录带 id（文件名去扩展名），供卡片流点击后跳转到相册页对应照片
 const allPhotos: { src: string; id: string }[] = await Promise.all(
   Object.entries(photoModules).map(async ([path, m]: [string, any]) => {
     const id = (path.split('/').pop() ?? '').replace(/\.[^.]+$/, '');
@@ -63,7 +63,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
         <span class="copy-bubble">已复制 ✓</span>
       </p>
       <div class="hero-actions">
-        <a class="btn primary" href={withBase('photos/')}>📷 看看摄影</a>
+        <a class="btn primary" href={withBase('photos/')}>📷 看看相册</a>
         <a class="btn outline" href={withBase('about/')}>关于我 →</a>
       </div>
     </div>
@@ -71,7 +71,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 
   {
     allPhotos.length > 0 && (
-      <section class="photo-marquee" data-photos={JSON.stringify(allPhotos)} aria-label="摄影卡片流">
+      <section class="photo-marquee" data-photos={JSON.stringify(allPhotos)} aria-label="相册卡片流">
         <div class="marquee-head">
           <span class="marquee-title">📷 随机拾光</span>
         </div>
@@ -167,7 +167,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
     btn.setAttribute('title', '点击复制 QQ 号');
   });
 
-  // ── 横向随机摄影卡片流（可拖拽 / 触摸 / 滚轮 + 惯性 + 鼠标跟随 3D 倾斜） ──
+  // ── 横向随机相册卡片流（滚轮微调 + 鼠标跟随 3D 倾斜 + 自动滚动） ──
   function buildMarquee() {
     const wrap = document.querySelector<HTMLElement>('.photo-marquee');
     const track = document.getElementById('marqueeTrack');
@@ -190,7 +190,7 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
     const unitCount = picked.length;
 
     const cardHtml = (item: { src: string; id: string }) =>
-      `<a class="marquee-card" href="${withBaseSafe('photos/')}#${encodeURIComponent(item.id)}"><img src="${item.src}" alt="摄影作品" loading="eager" decoding="async" fetchpriority="low" draggable="false" /></a>`;
+      `<a class="marquee-card" href="${withBaseSafe('photos/')}#${encodeURIComponent(item.id)}"><img src="${item.src}" alt="相册作品" loading="eager" decoding="async" fetchpriority="low" draggable="false" /></a>`;
 
     // 两阶段构建：先放 1 份测宽，再按视口宽度补足份数（封顶 6，避免 DOM 爆炸）
     track.innerHTML = picked.map(cardHtml).join('');
