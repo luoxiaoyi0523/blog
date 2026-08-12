@@ -1,6 +1,16 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { withBase } from '../utils/path';
+import { getImage } from 'astro:assets';
+
+// 资源路径归一化：getImage 返回的 src 是 /_astro/...（不含 base 前缀），
+// 项目页 base='/blog/'，必须补上前缀，否则图片 404。
+const BASE = import.meta.env.BASE_URL;
+function normSrc(src: string): string {
+  let s = src;
+  if (s.startsWith(BASE)) s = s.slice(BASE.length);
+  s = s.replace(/^\/+/, '');
+  return BASE + s;
+}
 
 // 自动读取 src/assets/photos/ 下的所有图片（jpg/png/webp/gif/avif）。
 // 你只需把照片文件丢进那个文件夹，构建时会自动出现在这里，无需改任何代码。
@@ -8,15 +18,22 @@ const modules = import.meta.glob('../assets/photos/*.{jpeg,jpg,png,webp,gif,avif
   eager: true,
 });
 
-const photos = Object.entries(modules)
-  .map(([path, mod]) => {
-    const meta = (mod as any).default;
-    const base = path.split('/').pop() ?? '';
-    const id = base.replace(/\.[^.]+$/, '');
-    const caption = id.replace(/[-_]+/g, ' ');
-    return { src: meta.src as string, caption, id };
-  })
-  .sort((a, b) => a.caption.localeCompare(b.caption));
+// 构建期把每张原图压成两种尺寸：
+//  - 瀑布流缩略图（约 2x 列宽，体积极小、加载快）
+//  - 灯箱大图（等比缩放，避免直接读几 MB 原图）
+const photos = (
+  await Promise.all(
+    Object.entries(modules).map(async ([path, mod]) => {
+      const meta = (mod as any).default;
+      const base = path.split('/').pop() ?? '';
+      const id = base.replace(/\.[^.]+$/, '');
+      const caption = id.replace(/[-_]+/g, ' ');
+      const thumb = await getImage({ src: meta, width: 800, format: 'webp', quality: 72 });
+      const full = await getImage({ src: meta, width: 1600, format: 'webp', quality: 82 });
+      return { thumb: normSrc(thumb.src), full: normSrc(full.src), caption, id };
+    })
+  )
+).sort((a, b) => a.caption.localeCompare(b.caption));
 ---
 
 <BaseLayout title="摄影" description="我的摄影作品集，分享旅行与生活里的光影。">
@@ -36,8 +53,8 @@ const photos = Object.entries(modules)
     ) : (
       <div class="gallery">
         {photos.map((p, i) => (
-          <figure class="photo" data-i={i} data-full={p.src} data-cap={p.caption} data-photo-id={p.id}>
-            <img src={p.src} alt={p.caption} loading="lazy" />
+          <figure class="photo" data-i={i} data-full={p.full} data-cap={p.caption} data-photo-id={p.id}>
+            <img src={p.thumb} alt={p.caption} loading="lazy" decoding="async" />
             <figcaption>{p.caption}</figcaption>
           </figure>
         ))}
@@ -56,32 +73,42 @@ const photos = Object.entries(modules)
 </BaseLayout>
 
 <script>
-  const figs = () => Array.from(document.querySelectorAll<HTMLElement>('.photo'));
-  const lb = document.getElementById('lightbox');
-  const lbImg = document.getElementById('lbImg') as HTMLImageElement;
-  const lbCap = document.getElementById('lbCap');
+  // ⚠️ 注意：不要在这里用 const lb = getElementById(...) 顶层捕获元素！
+  // 因为脚本在首页加载时就已执行，那时 document 里还没有 #lightbox（首页无灯箱），
+  // 闭包会一直持有 null，导致从首页 SPA 跳转摄影页后灯箱永远打不开。
+  // 所有元素引用都改为「每次使用时实时查询」。
   let cur = 0;
+
+  const figs = () => Array.from(document.querySelectorAll<HTMLElement>('.photo'));
+  const getLb = () => document.getElementById('lightbox');
+  const getLbImg = () => document.getElementById('lbImg') as HTMLImageElement | null;
+  const getLbCap = () => document.getElementById('lbCap');
 
   function show(i: number) {
     const list = figs();
     if (!list.length) return;
     cur = (i + list.length) % list.length;
     const f = list[cur];
-    if (lbImg && lbCap && f) {
-      lbImg.src = f.dataset.full || '';
-      lbCap.textContent = f.dataset.cap || '';
+    const img = getLbImg();
+    const cap = getLbCap();
+    if (img && cap && f) {
+      img.src = f.dataset.full || '';
+      cap.textContent = f.dataset.cap || '';
     }
   }
   function open() {
+    const lb = getLb();
     lb?.classList.add('open');
     lb?.setAttribute('aria-hidden', 'false');
   }
   function close() {
+    const lb = getLb();
     lb?.classList.remove('open');
     lb?.setAttribute('aria-hidden', 'true');
   }
 
-  // 用事件委托，兼容 Astro View Transitions（document 不会被替换）
+  // 用事件委托，兼容 Astro View Transitions（document 不会被替换），
+  // 且每次都实时查询元素，避免持有过期引用。
   document.addEventListener('click', (e) => {
     const t = e.target as HTMLElement;
     const fig = t.closest<HTMLElement>('.photo');
@@ -90,33 +117,48 @@ const photos = Object.entries(modules)
       open();
       return;
     }
+    const lb = getLb();
     if (t.closest('.lb-close') || t === lb) close();
     if (t.closest('.lb-prev')) show(cur - 1);
     if (t.closest('.lb-next')) show(cur + 1);
   });
   document.addEventListener('keydown', (e) => {
+    const lb = getLb();
     if (!lb?.classList.contains('open')) return;
     if (e.key === 'Escape') close();
     if (e.key === 'ArrowLeft') show(cur - 1);
     if (e.key === 'ArrowRight') show(cur + 1);
   });
 
-  // 支持从首页「随机拾光」卡片流带 #照片id 跳转进来，平滑滚动到目标照片位置
+  // 支持从首页「随机拾光」卡片流带 #照片id 跳转进来，平滑滚动到目标照片位置（不弹灯箱）
   function scrollToPhoto() {
-    const h = decodeURIComponent(location.hash.replace(/^#/, ''));
-    if (!h) return;
-    const list = figs();
-    const target = list.find((f) => f.dataset.photoId === h);
-    if (target) {
-      // 稍等瀑布流布局完成后再滚动
+    try {
+      const h = decodeURIComponent(location.hash.replace(/^#/, ''));
+      if (!h) return;
+      const target = figs().find((f) => f.dataset.photoId === h);
+      if (!target) return;
+
+      const doScroll = () => {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      };
+
       requestAnimationFrame(() => {
-        target.scrollIntoView({ behavior: 'instant', block: 'center' });
+        doScroll();
         // 高亮一下让用户看清是哪张
+        target.style.transition = 'box-shadow .3s ease';
         target.style.boxShadow = '0 0 0 3px var(--accent), var(--shadow-hover)';
         setTimeout(() => {
           target.style.boxShadow = '';
         }, 2000);
       });
+
+      // 图片懒加载完成后高度会变，再对准一次，避免滚偏
+      const img = target.querySelector('img');
+      if (img && !img.complete) {
+        img.addEventListener('load', () => requestAnimationFrame(doScroll), { once: true });
+      }
+    } catch (_) {
+      /* 忽略解析异常 */
     }
   }
   if (document.readyState !== 'loading') scrollToPhoto();
