@@ -226,78 +226,43 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
         });
       });
 
-      // ── 拖拽 / 触摸 / 滚轮 滚动控制器（松手带惯性，无限循环） ──
+      // ── 自动滚动（rAF 真无缝循环）+ 鼠标悬停暂停 + 滚轮微调 ──
       let pos = 0;              // 轨道位移（负值=向左）
-      let isDown = false;
-      let startX = 0, startPos = 0, lastX = 0, lastT = 0, velocity = 0, moved = 0;
-      let momentumId = 0;
-      let suppressClick = false;
+      let running = true;
+      let lastTime: number | null = null;
+      const SPEED = 55;         // px/秒
 
-      // 把任意位移折叠到 [-oneSetWidth, 0)，内容重复故视觉无缝
-      const wrapPos = (p: number) => {
-        if (oneSetWidth <= 0) return p;
-        let r = p % oneSetWidth;
-        if (r > 0) r -= oneSetWidth;
-        return r;
-      };
-      const apply = () => { track.style.transform = `translate3d(${pos}px,0,0)`; };
-      const stopMomentum = () => { if (momentumId) { cancelAnimationFrame(momentumId); momentumId = 0; } };
+      function tick(now: number) {
+        if (!running) { lastTime = null; requestAnimationFrame(tick); return; }
+        if (lastTime === null) lastTime = now;
+        const dt = (now - lastTime) / 1000;
+        lastTime = now;
+        pos -= SPEED * dt;
+        // 对一份周期取模：滚过即瞬间回到对应位置，第 2 份与第 1 份完全相同，肉眼不可见
+        if (oneSetWidth > 0) {
+          pos %= oneSetWidth;
+          if (pos > 0) pos -= oneSetWidth;
+        }
+        // translate3d 强制 GPU 合成层，滚动不触发主线程重绘
+        track.style.transform = `translate3d(${pos}px,0,0)`;
+        requestAnimationFrame(tick);
+      }
+      if (oneSetWidth > 0) requestAnimationFrame(tick);
 
-      const onDown = (e: PointerEvent) => {
-        isDown = true;
-        stopMomentum();
-        startX = e.clientX; startPos = pos; lastX = e.clientX; lastT = performance.now();
-        velocity = 0; moved = 0;
-        viewport.classList.add('dragging');
-        viewport.setPointerCapture?.(e.pointerId);
-      };
-      const onMove = (e: PointerEvent) => {
-        if (!isDown) return;
-        const dx = e.clientX - startX;
-        moved = Math.max(moved, Math.abs(dx));
-        pos = wrapPos(startPos + dx);
-        apply();
-        const now = performance.now();
-        const dt = now - lastT;
-        if (dt > 0) velocity = (e.clientX - lastX) / dt; // px/ms
-        lastX = e.clientX; lastT = now;
-      };
-      const onUp = (e: PointerEvent) => {
-        if (!isDown) return;
-        isDown = false;
-        viewport.classList.remove('dragging');
-        viewport.releasePointerCapture?.(e.pointerId);
-        if (moved > 6) suppressClick = true; // 拖拽过则不触发卡片链接跳转
-        const step = () => {
-          if (isDown) { momentumId = 0; return; }
-          if (Math.abs(velocity) < 0.02) { momentumId = 0; return; }
-          pos = wrapPos(pos + velocity * 16);
-          apply();
-          velocity *= 0.93;
-          momentumId = requestAnimationFrame(step);
-        };
-        momentumId = requestAnimationFrame(step);
-      };
+      // 鼠标悬停暂停 / 离开恢复（监听容器，不受内部卡片重建影响）
+      viewport.addEventListener('mouseenter', () => { running = false; });
+      viewport.addEventListener('mouseleave', () => { running = true; });
 
-      // 捕获阶段拦截点击：拖拽误触时阻止跳转到摄影页
-      viewport.addEventListener('click', (e) => {
-        if (suppressClick) { e.preventDefault(); e.stopPropagation(); suppressClick = false; }
-      }, true);
-
-      // 鼠标滚轮 / 触控板横向滚动
+      // 滚轮 / 触控板横向滚动（悬停时自动滚动已暂停，滚轮自由控制；离开后自动滚动从当前位置继续）
       viewport.addEventListener('wheel', (e) => {
         e.preventDefault();
-        stopMomentum();
-        pos = wrapPos(pos - (e.deltaY + e.deltaX));
-        apply();
+        pos -= (e.deltaY + e.deltaX);
+        if (oneSetWidth > 0) {
+          pos %= oneSetWidth;
+          if (pos > 0) pos -= oneSetWidth;
+        }
+        track.style.transform = `translate3d(${pos}px,0,0)`;
       }, { passive: false });
-
-      viewport.addEventListener('pointerdown', onDown);
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
-      window.addEventListener('pointercancel', onUp);
-
-      apply();
     });
   }
 
