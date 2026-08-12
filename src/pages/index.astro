@@ -16,8 +16,6 @@ const totalPages = Math.max(1, Math.ceil(posts.length / pageSize));
 const pagePosts = posts.slice(0, pageSize);
 const currentPage = 1;
 
-const QQ_NUMBER = '1707127199';
-
 // 读取摄影文件夹全部图片，构建时统一转成 440×280 的 webp 缩略图，
 // 这样运行时加载的是几十 KB 级的小图，而不是几 MB 的原图——这是解决
 // “加载时整个网站都卡”的根本手段。客户端每次刷新再随机抽几张做横向流。
@@ -59,10 +57,13 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
         <img src={withBase('avatar.jpg')} alt="" />
       </div>
       <h1>鱼板的自留地</h1>
-      <p class="hero-tag quote-text" data-quotes='["生活不是等待风暴过去，而是学会在雨中跳舞。", "你不必等到万事俱备才出发，光是你自己就足够了。", "所谓自由，不是随心所欲，而是主宰自己。", "世界很大，书本就是窗户。", "每一个不曾起舞的日子，都是对生命的辜负。", "保持热爱，奔赴山海。", "星光不问赶路人，时光不负有心人。", "愿你历尽千帆，归来仍是少年。", "种一棵树最好的时间是十年前，其次是现在。", "人生没有白走的路，每一步都算数。", "与其向往，不如成为。", "温柔半两，从容一生。"]' title="点击复制语录">记录技术、生活与细碎思绪</p>
+      <p class="hero-tag quote-wrap" data-quotes='["生活不是等待风暴过去，而是学会在雨中跳舞。", "你不必等到万事俱备才出发，光是你自己就足够了。", "所谓自由，不是随心所欲，而是主宰自己。", "世界很大，书本就是窗户。", "每一个不曾起舞的日子，都是对生命的辜负。", "保持热爱，奔赴山海。", "星光不问赶路人，时光不负有心人。", "愿你历尽千帆，归来仍是少年。", "种一棵树最好的时间是十年前，其次是现在。", "人生没有白走的路，每一步都算数。", "与其向往，不如成为。", "温柔半两，从容一生。"]'>
+        <span class="quote-text">记录技术、生活与细碎思绪</span>
+        <span class="quote-copy" aria-hidden="true">📋</span>
+        <span class="copy-bubble">已复制 ✓</span>
+      </p>
       <div class="hero-actions">
         <a class="btn primary" href={withBase('photos/')}>📷 看看摄影</a>
-        <button class="btn outline qq-btn" data-qq={QQ_NUMBER} title="点击复制 QQ 号">📮 QQ: {QQ_NUMBER}</button>
         <a class="btn outline" href={withBase('about/')}>关于我 →</a>
       </div>
     </div>
@@ -73,7 +74,6 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
       <section class="photo-marquee" data-photos={JSON.stringify(allPhotos)} aria-label="摄影卡片流">
         <div class="marquee-head">
           <span class="marquee-title">📷 随机拾光</span>
-          <span class="marquee-sub">每次刷新，随机几张</span>
         </div>
         <div class="marquee-viewport">
           <div class="marquee-track" id="marqueeTrack"></div>
@@ -90,47 +90,52 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 </BaseLayout>
 
 <script>
-  // ── 随机语录：每次加载随机选一句，点击复制 ──
+  // ── 随机语录：每次加载随机选一句，点击复制（气泡提示，不挡文字） ──
   function initQuote() {
-    const el = document.querySelector<HTMLElement>('.quote-text');
-    if (!el) return;
-    const raw = el.dataset.quotes || '[]';
+    const wrap = document.querySelector<HTMLElement>('.quote-wrap');
+    if (!wrap || wrap.dataset.inited) return;
+    const raw = wrap.dataset.quotes || '[]';
+    let quotes: string[] = [];
     try {
-      const quotes: string[] = JSON.parse(raw);
-      if (quotes.length === 0) return;
-      // 随机取一句（用日期做种子，同一天内 SPA 跳转保持一致，但新页面加载会变）
-      const idx = Math.floor(Math.random() * quotes.length);
-      el.textContent = quotes[idx];
-      el.dataset.current = quotes[idx];
+      quotes = JSON.parse(raw);
+    } catch (_) {
+      return;
+    }
+    if (!quotes.length) return;
 
-      // 点击复制
-      el.style.cursor = 'pointer';
-      el.addEventListener('click', () => {
-        const text = el.dataset.current || el.textContent || '';
-        navigator.clipboard.writeText(text).then(() => {
-          const orig = el.textContent;
-          el.textContent = '✅ 已复制！';
-          setTimeout(() => { if (el) el.textContent = orig; }, 1500);
-        }).catch(() => {
-          const ta = document.createElement('textarea');
-          ta.value = text;
-          ta.style.position = 'fixed';
-          ta.style.opacity = '0';
-          document.body.appendChild(ta);
-          ta.select();
-          document.execCommand('copy');
-          document.body.removeChild(ta);
-          const orig = el.textContent;
-          el.textContent = '✅ 已复制！';
-          setTimeout(() => { if (el) el.textContent = orig; }, 1500);
-        });
+    const textEl = wrap.querySelector<HTMLElement>('.quote-text');
+    const bubble = wrap.querySelector<HTMLElement>('.copy-bubble');
+    if (!textEl) return;
+
+    // 随机选一句
+    textEl.textContent = quotes[Math.floor(Math.random() * quotes.length)];
+
+    const showBubble = () => {
+      if (!bubble) return;
+      bubble.classList.add('show');
+      setTimeout(() => bubble.classList.remove('show'), 1500);
+    };
+
+    wrap.addEventListener('click', () => {
+      const text = textEl.textContent || '';
+      navigator.clipboard.writeText(text).then(showBubble).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        showBubble();
       });
-    } catch (_) { /* 解析失败则保留 fallback 文字 */ }
+    });
+    wrap.dataset.inited = '1';
   }
   initQuote();
   document.addEventListener('astro:page-load', initQuote);
 
-  // ── QQ 号一键复制 ──
+  // ── QQ 号一键复制（仅作用于关于页等仍带 .qq-btn 的地方） ──
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.qq-btn') as HTMLButtonElement | null;
     if (!btn) return;
