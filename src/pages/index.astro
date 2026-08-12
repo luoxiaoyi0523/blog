@@ -59,18 +59,11 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
         <img src={withBase('avatar.jpg')} alt="" />
       </div>
       <h1>鱼板的自留地</h1>
-      <p class="hero-tag">{SITE.tagline}</p>
+      <p class="hero-tag quote-text" data-quotes='["生活不是等待风暴过去，而是学会在雨中跳舞。", "你不必等到万事俱备才出发，光是你自己就足够了。", "所谓自由，不是随心所欲，而是主宰自己。", "世界很大，书本就是窗户。", "每一个不曾起舞的日子，都是对生命的辜负。", "保持热爱，奔赴山海。", "星光不问赶路人，时光不负有心人。", "愿你历尽千帆，归来仍是少年。", "种一棵树最好的时间是十年前，其次是现在。", "人生没有白走的路，每一步都算数。", "与其向往，不如成为。", "温柔半两，从容一生。"]' title="点击复制语录">记录技术、生活与细碎思绪</p>
       <div class="hero-actions">
         <a class="btn primary" href={withBase('photos/')}>📷 看看摄影</a>
         <button class="btn outline qq-btn" data-qq={QQ_NUMBER} title="点击复制 QQ 号">📮 QQ: {QQ_NUMBER}</button>
         <a class="btn outline" href={withBase('about/')}>关于我 →</a>
-      </div>
-      <div class="hero-stats">
-        <span><strong>{posts.length}</strong> 篇文章</span>
-        <span class="sep">·</span>
-        <a href={withBase('categories/')}>分类</a>
-        <span class="sep">·</span>
-        <a href={withBase('photos/')}>摄影</a>
       </div>
     </div>
   </section>
@@ -97,6 +90,46 @@ const allPhotos: { src: string; id: string }[] = await Promise.all(
 </BaseLayout>
 
 <script>
+  // ── 随机语录：每次加载随机选一句，点击复制 ──
+  function initQuote() {
+    const el = document.querySelector<HTMLElement>('.quote-text');
+    if (!el) return;
+    const raw = el.dataset.quotes || '[]';
+    try {
+      const quotes: string[] = JSON.parse(raw);
+      if (quotes.length === 0) return;
+      // 随机取一句（用日期做种子，同一天内 SPA 跳转保持一致，但新页面加载会变）
+      const idx = Math.floor(Math.random() * quotes.length);
+      el.textContent = quotes[idx];
+      el.dataset.current = quotes[idx];
+
+      // 点击复制
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => {
+        const text = el.dataset.current || el.textContent || '';
+        navigator.clipboard.writeText(text).then(() => {
+          const orig = el.textContent;
+          el.textContent = '✅ 已复制！';
+          setTimeout(() => { if (el) el.textContent = orig; }, 1500);
+        }).catch(() => {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          document.execCommand('copy');
+          document.body.removeChild(ta);
+          const orig = el.textContent;
+          el.textContent = '✅ 已复制！';
+          setTimeout(() => { if (el) el.textContent = orig; }, 1500);
+        });
+      });
+    } catch (_) { /* 解析失败则保留 fallback 文字 */ }
+  }
+  initQuote();
+  document.addEventListener('astro:page-load', initQuote);
+
   // ── QQ 号一键复制 ──
   document.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest('.qq-btn') as HTMLButtonElement | null;
