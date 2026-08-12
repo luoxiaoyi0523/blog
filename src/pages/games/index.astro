@@ -137,6 +137,8 @@ import { SITE } from '../../consts';
 
 <script>
   // ── 敲木鱼小游戏 ──
+  // 注意：Astro 视图过渡（客户端导航）不会重新执行 <script>，所以初始化
+  // 必须挂在 astro:page-load 上，否则从别的页面切过来时木鱼数据会"消失"。
   const STORE_TOTAL = 'woodfish_total';
   const STORE_TODAY = 'woodfish_today';
   const STORE_DATE = 'woodfish_date';
@@ -146,107 +148,106 @@ import { SITE } from '../../consts';
     return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
   };
 
-  function loadTotal(): number {
-    return parseInt(localStorage.getItem(STORE_TOTAL) || '0', 10) || 0;
-  }
-  function loadToday(): number {
-    const date = localStorage.getItem(STORE_DATE);
-    if (date !== todayStr()) {
+  function initWoodfish() {
+    const fish = document.getElementById('woodfish') as HTMLButtonElement | null;
+    if (!fish) return;
+    // 同一 DOM 元素只初始化一次，避免重复绑定（客户端导航会换新 DOM，故仍会重跑）
+    if (fish.dataset.inited) return;
+    fish.dataset.inited = '1';
+
+    const popLayer = document.getElementById('popLayer');
+    const todayEl = document.getElementById('todayMerit');
+    const totalEl = document.getElementById('totalMerit');
+    const soundBtn = document.getElementById('soundToggle') as HTMLButtonElement | null;
+    const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
+
+    // 从 localStorage 读取（按当天日期重置今日计数）
+    let today = parseInt(localStorage.getItem(STORE_TODAY) || '0', 10) || 0;
+    if (localStorage.getItem(STORE_DATE) !== todayStr()) {
+      today = 0;
       localStorage.setItem(STORE_TODAY, '0');
       localStorage.setItem(STORE_DATE, todayStr());
-      return 0;
     }
-    return parseInt(localStorage.getItem(STORE_TODAY) || '0', 10) || 0;
-  }
+    let total = parseInt(localStorage.getItem(STORE_TOTAL) || '0', 10) || 0;
+    let muted = false;
+    let audioCtx: AudioContext | null = null;
 
-  const fish = document.getElementById('woodfish') as HTMLButtonElement | null;
-  const popLayer = document.getElementById('popLayer');
-  const todayEl = document.getElementById('todayMerit');
-  const totalEl = document.getElementById('totalMerit');
-  const soundBtn = document.getElementById('soundToggle') as HTMLButtonElement | null;
-  const resetBtn = document.getElementById('resetBtn') as HTMLButtonElement | null;
-
-  let today = loadToday();
-  let total = loadTotal();
-  let muted = false;
-  let audioCtx: AudioContext | null = null;
-
-  function render() {
-    if (todayEl) todayEl.textContent = String(today);
-    if (totalEl) totalEl.textContent = String(total);
-  }
-  render();
-
-  // 木鱼「笃」声：低频三角波快速衰减 + 一点点噪声，纯 Web Audio 合成，无需音频文件
-  function playKnock() {
-    if (muted) return;
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
-    if (!AC) return;
-    if (!audioCtx) audioCtx = new AC();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    const now = audioCtx.currentTime;
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(430, now);
-    osc.frequency.exponentialRampToValueAtTime(170, now + 0.09);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(0.55, now + 0.005);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(now);
-    osc.stop(now + 0.2);
-  }
-
-  function spawnPop() {
-    if (!popLayer) return;
-    const span = document.createElement('span');
-    span.className = 'merit-pop';
-    span.textContent = '功德 +1';
-    // 轻微随机水平偏移，避免每次都叠在同一位置
-    span.style.left = `${48 + (Math.random() * 8 - 4)}%`;
-    popLayer.appendChild(span);
-    setTimeout(() => span.remove(), 1000);
-  }
-
-  function knock() {
-    today += 1;
-    total += 1;
-    localStorage.setItem(STORE_TODAY, String(today));
-    localStorage.setItem(STORE_TOTAL, String(total));
-    localStorage.setItem(STORE_DATE, todayStr());
+    function render() {
+      if (todayEl) todayEl.textContent = String(today);
+      if (totalEl) totalEl.textContent = String(total);
+    }
     render();
-    playKnock();
-    spawnPop();
-    // 处理掉 active 状态后强制回弹（键盘触发时也给点反馈）
-    if (fish) {
-      fish.style.transform = 'scale(0.9)';
-      setTimeout(() => { if (fish) fish.style.transform = ''; }, 90);
-    }
-  }
 
-  if (fish) {
+    // 木鱼「笃」声：低频三角波快速衰减，纯 Web Audio 合成，无需音频文件
+    function playKnock() {
+      if (muted) return;
+      const AC = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(430, now);
+      osc.frequency.exponentialRampToValueAtTime(170, now + 0.09);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.55, now + 0.005);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    }
+
+    function spawnPop() {
+      if (!popLayer) return;
+      const span = document.createElement('span');
+      span.className = 'merit-pop';
+      span.textContent = '功德 +1';
+      // 轻微随机水平偏移，避免每次都叠在同一位置
+      span.style.left = `${48 + (Math.random() * 8 - 4)}%`;
+      popLayer.appendChild(span);
+      setTimeout(() => span.remove(), 1000);
+    }
+
+    function knock() {
+      today += 1;
+      total += 1;
+      localStorage.setItem(STORE_TODAY, String(today));
+      localStorage.setItem(STORE_TOTAL, String(total));
+      localStorage.setItem(STORE_DATE, todayStr());
+      render();
+      playKnock();
+      spawnPop();
+      // 处理掉 active 状态后强制回弹（键盘触发时也给点反馈）
+      fish.style.transform = 'scale(0.9)';
+      setTimeout(() => { fish.style.transform = ''; }, 90);
+    }
+
     fish.addEventListener('pointerdown', (e) => { e.preventDefault(); knock(); });
     fish.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); knock(); }
     });
+
+    if (soundBtn) {
+      soundBtn.addEventListener('click', () => {
+        muted = !muted;
+        soundBtn.textContent = muted ? '🔇 声音：关' : '🔊 声音：开';
+        soundBtn.setAttribute('aria-pressed', String(!muted));
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        today = 0;
+        localStorage.setItem(STORE_TODAY, '0');
+        localStorage.setItem(STORE_DATE, todayStr());
+        render();
+      });
+    }
   }
 
-  if (soundBtn) {
-    soundBtn.addEventListener('click', () => {
-      muted = !muted;
-      soundBtn.textContent = muted ? '🔇 声音：关' : '🔊 声音：开';
-      soundBtn.setAttribute('aria-pressed', String(!muted));
-    });
-  }
-
-  if (resetBtn) {
-    resetBtn.addEventListener('click', () => {
-      today = 0;
-      localStorage.setItem(STORE_TODAY, '0');
-      localStorage.setItem(STORE_DATE, todayStr());
-      render();
-    });
-  }
+  initWoodfish();
+  document.addEventListener('astro:page-load', initWoodfish);
 </script>
