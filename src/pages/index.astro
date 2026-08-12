@@ -127,19 +127,13 @@ const allPhotos: string[] = Object.values(photoModules).map(
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-    // 随机抽卡片（最少保证能铺满一屏）
+    // 随机抽卡片（实际数量可能少于目标，比如照片很少时）
     const count = Math.max(4, Math.min(all.length, 6 + Math.floor(Math.random() * 4)));
-    const picked = shuffled.slice(0, count);
+    const picked = shuffled.slice(0, count); // 一个循环单元，长度 = min(count, 照片数)
+    const unitCount = picked.length;
 
-    // 放 3 份：显示区 + 缓冲区 + 再缓冲（rAF 重置时绝对安全）
-    const set = [...picked, ...picked, ...picked];
-    track.innerHTML = set
-      .map(
-        (src) =>
-          `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="lazy" /></a>`
-      )
-      .join('');
-    track.dataset.built = '1';
+    const cardHtml = (src: string) =>
+      `<a class="marquee-card" href="${withBaseSafe('photos/')}"><img src="${src}" alt="摄影作品" loading="lazy" /></a>`;
 
     // ── rAF 无缝滚动引擎 ──
     let pos = 0;
@@ -155,56 +149,57 @@ const allPhotos: string[] = Object.values(photoModules).map(
       lastTime = now;
 
       pos -= SPEED * dt;
-
-      // 核心无缝逻辑：对一份宽度取模，滚过即瞬间回到对应位置
-      // 因为第 2 份和第 1 份内容完全相同，回弹瞬间肉眼不可见
-      // 用取模而非 if，可兼容后台标签页 dt 过大造成的跳变
+      // 对一份周期取模：滚过即瞬间回到对应位置，第 2 份与第 1 份完全相同，肉眼不可见
       if (oneSetWidth > 0) {
         pos %= oneSetWidth;
       }
-
       track.style.transform = `translateX(${pos}px)`;
       requestAnimationFrame(tick);
     }
 
-    // 等布局完成后再启动，获取精确宽度
-    requestAnimationFrame(() => {
-      const cards = track.querySelectorAll<HTMLElement>('.marquee-card');
-      if (cards.length < count + 1) return;
-      // 第 2 份第一张卡片相对第 1 份第一张的偏移 = 真正的循环周期
-      // （直接读 offsetLeft，自动包含卡片间的 gap，避免回弹差一截导致顿挫）
-      oneSetWidth = (cards[count] as HTMLElement).offsetLeft - (cards[0] as HTMLElement).offsetLeft;
-      if (oneSetWidth > 0) {
-        requestAnimationFrame(tick);
-      }
-    });
-
-    // 鼠标悬停暂停 / 离开恢复
+    // 鼠标悬停暂停 / 离开恢复（监听容器，不受内部卡片重建影响）
     const viewport = wrap.querySelector<HTMLElement>('.marquee-viewport');
     if (viewport) {
       viewport.addEventListener('mouseenter', () => { running = false; });
       viewport.addEventListener('mouseleave', () => { running = true; });
     }
 
-    // ── 鼠标跟随 3D 倾斜效果 ──
-    track.querySelectorAll<HTMLElement>('.marquee-card').forEach((card) => {
-      card.addEventListener('mousemove', (e: MouseEvent) => {
-        const rect = card.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        const cx = rect.width / 2;
-        const cy = rect.height / 2;
-        const nx = (x - cx) / cx;
-        const ny = (y - cy) / cy;
-        const rotY = nx * 14;
-        const rotX = -ny * 10;
-        card.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
-        card.style.transition = 'transform 0.12s ease-out';
-      });
+    // 两阶段构建：先放 1 份测宽，再按视口宽度补足份数，
+    // 保证轨道总宽 ≥ 视口宽*2 + 1 份，回弹时视口右侧永远不会露白
+    track.innerHTML = picked.map(cardHtml).join('');
+    track.dataset.built = '1';
 
-      card.addEventListener('mouseleave', () => {
-        card.style.transform = `perspective(800px) rotateY(-4deg) rotateX(2deg)`;
-        card.style.transition = 'transform 0.45s cubic-bezier(.2,.9,.3,1)';
+    requestAnimationFrame(() => {
+      const vw = viewport ? viewport.clientWidth : window.innerWidth;
+      const unitW = track.scrollWidth || unitCount * (220 + 16);
+      const needed = Math.max(2, Math.ceil((vw * 2 + unitW) / unitW));
+
+      let full = '';
+      for (let i = 0; i < needed; i++) full += picked.map(cardHtml).join('');
+      track.innerHTML = full;
+
+      const cards = track.querySelectorAll<HTMLElement>('.marquee-card');
+      // 循环周期 = 第 2 份首卡相对第 1 份首卡的偏移（含 gap，零误差）
+      oneSetWidth = cards.length > unitCount
+        ? (cards[unitCount] as HTMLElement).offsetLeft - (cards[0] as HTMLElement).offsetLeft
+        : track.scrollWidth;
+      if (oneSetWidth > 0) requestAnimationFrame(tick);
+
+      // ── 鼠标跟随 3D 倾斜（必须在重建后绑定到新卡片） ──
+      cards.forEach((card) => {
+        card.addEventListener('mousemove', (e: MouseEvent) => {
+          const rect = card.getBoundingClientRect();
+          const nx = (e.clientX - rect.left - rect.width / 2) / (rect.width / 2);
+          const ny = (e.clientY - rect.top - rect.height / 2) / (rect.height / 2);
+          const rotY = nx * 14;
+          const rotX = -ny * 10;
+          card.style.transform = `perspective(800px) rotateY(${rotY}deg) rotateX(${rotX}deg)`;
+          card.style.transition = 'transform 0.12s ease-out';
+        });
+        card.addEventListener('mouseleave', () => {
+          card.style.transform = `perspective(800px) rotateY(-4deg) rotateX(2deg)`;
+          card.style.transition = 'transform 0.45s cubic-bezier(.2,.9,.3,1)';
+        });
       });
     });
   }
