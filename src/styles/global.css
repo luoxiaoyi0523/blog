@@ -194,12 +194,22 @@ img { max-width: 100%; height: auto; }
   position: relative;
   margin: 18px 0 28px;
   border-radius: var(--radius);
-  background: linear-gradient(135deg, #38bdf8 0%, #818cf8 45%, #c084fc 75%, #f472b6 100%);
+  background: url('/blog/hero-bg.png') center/cover no-repeat;
   border: 1px solid var(--border);
   overflow: hidden;
 }
+/* 暗色遮罩，保证文字在图片上清晰可读 */
+.hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.65) 100%);
+  pointer-events: none;
+  z-index: 0;
+}
 .hero-inner {
   position: relative;
+  z-index: 1;
   text-align: center;
   padding: 40px 24px 32px;
 }
@@ -367,7 +377,10 @@ img { max-width: 100%; height: auto; }
   }
 }
 [data-theme="dark"] .hero {
-  background: linear-gradient(135deg, #0284c7 0%, #6366f1 45%, #a855f7 75%, #db2777 100%);
+  background: url('/blog/hero-bg.png') center/cover no-repeat;
+}
+[data-theme="dark"] .hero::before {
+  background: linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0.75) 100%);
 }
 
 /* ---------------- Post list / Cards ---------------- */
